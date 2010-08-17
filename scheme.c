@@ -703,6 +703,11 @@ object *read(FILE *in) {
     return cons(quote_symbol, cons(read(in), the_empty_list));
   }
 
+  /* EOF */
+  else if (c == EOF) {
+    return NULL;
+  }
+
   /* UNRECOGNIZED INPUT */
   else {
     error("bad input. Unexpected '%c'\n", c);
