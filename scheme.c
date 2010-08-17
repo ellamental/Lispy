@@ -1037,7 +1037,11 @@ void write(object *obj) {
 
 /** ***************************************************************************
 **                           Primitive Procedures
-******************************************************************************/
+*******************************************************************************
+** Primitive procedures are prefixed with p_
+** Helper procedures are prefixed with h_ and are for internal use.
+** Predicates (like equal? or number?) end with a p (p_equalp, p_numberp)
+**/
 
 /*  I/O
 *************************************************/
@@ -1084,6 +1088,60 @@ object *p_load(object *arguments) {
   return result;
 }
 
+/*  List Procedures
+************************************************/
+
+//  null?
+
+object *p_nullp(object *arguments) {
+  if (is_the_empty_list(car(arguments))) {
+    return True;}
+  else {return False;}
+}
+
+//  cons
+
+object *p_cons(object *arguments) {
+  return cons(car(arguments), cadr(arguments));
+}
+
+//  car
+
+object *p_car(object *arguments) {
+  return car(car(arguments));
+}
+
+//  cdr
+
+object *p_cdr(object *arguments) {
+  return cdr(car(arguments));
+}
+
+//  length
+
+object *h_length(object *lst) {
+  int count = 1;
+  
+  if (lst == the_empty_list) {
+    return make_fixnum(0);
+  }
+  while (cdr(lst) != the_empty_list) {
+    count += 1;
+    lst = cdr(lst);
+  }
+  return make_fixnum(count);
+}
+
+object *p_length(object *arguments) {
+  h_length(car(arguments));
+}
+
+
+/*  Equality Procedures
+************************************************/
+
+//  eqv?
+
 object *p_eqvp(object *arguments) {
   object *obj_1;
   object *obj_2;
@@ -1127,36 +1185,74 @@ object *p_eqvp(object *arguments) {
       return (obj_1 == obj_2) ? True : False;
       break;
   }
+}
+
+
+//  equal?
+
+object *h_equalp(object *obj_1, object *obj_2) {
+  object *result;
+  object *temp_1;
+  object *temp_2;
   
+  if (obj_1->type != obj_2->type) {
+    return False;
+  }
+
+  switch (obj_1->type) {
+    case THE_EMPTY_LIST:
+      return True;
+      break;
+    
+    case FIXNUM:
+      return (obj_1->data.fixnum.value == 
+              obj_2->data.fixnum.value) ? 
+              True : False;
+      break;
+      
+    case CHARACTER:
+      return (obj_1->data.character.value ==
+              obj_2->data.character.value) ?
+              True : False;
+      break;
+    
+    case SYMBOL:
+      return (obj_1->data.symbol.value ==
+              obj_2->data.symbol.value) ?
+              True : False;
+      break;
+    
+    case PRIMITIVE_PROCEDURE:
+    case COMPOUND_PROCEDURE:
+    case BOOLEAN:
+      return (obj_1 == obj_2) ? True : False;
+    
+    case STRING:
+      return !strcmp(obj_1->data.string.value, obj_2->data.string.value) ? 
+             True : False;
+      break;
+    
+    case PAIR:
+      if (h_length(obj_1)->data.fixnum.value != 
+          h_length(obj_2)->data.fixnum.value) {
+        return False;}
+      while (obj_1 != the_empty_list) {
+        if (h_equalp(car(obj_1), car(obj_2)) == True) {
+          obj_1 = cdr(obj_1);
+          obj_2 = cdr(obj_2);
+        }
+        else {
+          return False;
+        }
+      }
+      return True;
+    default:
+      error("Unsupported types for equal?");
+  }
 }
 
-/*  List Procedures
-************************************************/
-
-//  null?
-
-object *p_nullp(object *arguments) {
-  if (is_the_empty_list(car(arguments))) {
-    return True;}
-  else {return False;}
-}
-
-//  cons
-
-object *p_cons(object *arguments) {
-  return cons(car(arguments), cadr(arguments));
-}
-
-//  car
-
-object *p_car(object *arguments) {
-  return car(car(arguments));
-}
-
-//  cdr
-
-object *p_cdr(object *arguments) {
-  return cdr(car(arguments));
+object *p_equalp(object *arguments) {
+  h_equalp(car(arguments), cadr(arguments));
 }
 
 
@@ -1240,6 +1336,44 @@ object *p_less_than(object *arguments) {
 }
 
 
+/*  Type Procedures
+************************************************/
+
+object *p_type(object *arguments) {
+  object *obj;
+  obj = car(arguments);
+  
+  switch (obj->type) {
+    case THE_EMPTY_LIST:
+      return cons(make_string("'()"), the_empty_list);
+    
+    case BOOLEAN:
+      return cons(make_string("boolean"), the_empty_list);
+      
+    case CHARACTER:
+      return cons(make_string("character"), the_empty_list);
+      
+    case SYMBOL:
+      return cons(make_string("symbol"), the_empty_list);
+      
+    case FIXNUM:
+      return cons(make_string("number"), cons(make_string("integer"), the_empty_list));
+      
+    case PRIMITIVE_PROCEDURE:
+      return cons(make_string("procedure"), cons(make_string("primitive"), the_empty_list));
+    
+    case COMPOUND_PROCEDURE:
+      return cons(make_string("procedure"), cons(make_string("compound"), the_empty_list));
+ 
+    case STRING:
+      return cons(make_string("sequence"), cons(make_string("string"), the_empty_list));
+    
+    case PAIR:
+      return cons(make_string("sequence"), cons(make_string("pair"), the_empty_list));
+  }
+}
+
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -1298,24 +1432,33 @@ void populate_global_environment(void) {
   add_procedure("print", p_print);
   add_procedure("load",  p_load);
   
-  add_procedure("eqv?",  p_eqvp);
   
   // List Procedures
-  add_procedure("null?", p_nullp);
-  add_procedure("cons",  p_cons);
-  add_procedure("car",   p_car);
-  add_procedure("cdr",   p_cdr);
+  add_procedure("null?",  p_nullp);
+  add_procedure("cons",   p_cons);
+  add_procedure("car",    p_car);
+  add_procedure("cdr",    p_cdr);
+  add_procedure("length", p_length);
 
   
+  // Equality Procedures
+  add_procedure("eqv?",   p_eqvp);
+  add_procedure("equal?", p_equalp);
+  
+  
   // Numeric Procedures
-  add_procedure("=" , p_numeric_equal);
-  add_procedure("+" , p_add);
-  add_procedure("-" , p_sub);
-  add_procedure("*" , p_mul);
-  add_procedure("/" , p_div);
+  add_procedure("=", p_numeric_equal);
+  add_procedure("+", p_add);
+  add_procedure("-", p_sub);
+  add_procedure("*", p_mul);
+  add_procedure("/", p_div);
 
-  add_procedure(">" , p_greater_than);
-  add_procedure("<" , p_less_than);
+  add_procedure(">", p_greater_than);
+  add_procedure("<", p_less_than);
+  
+  
+  // Type Procedures
+  add_procedure("type", p_type);
 
 }
 
