@@ -1339,9 +1339,9 @@ object *p_less_than(object *arguments) {
 /*  Type Procedures
 ************************************************/
 
-object *p_type(object *arguments) {
-  object *obj;
-  obj = car(arguments);
+//  type
+
+object *h_type(object *obj) {
   
   switch (obj->type) {
     case THE_EMPTY_LIST:
@@ -1373,6 +1373,39 @@ object *p_type(object *arguments) {
   }
 }
 
+object *p_type(object *arguments) {
+  h_type(car(arguments));
+}
+
+//  type?
+
+object *p_typep(object *arguments) {
+  h_equalp(h_type(car(arguments)), h_type(cadr(arguments)));
+}
+
+// number->string
+
+object *p_number_to_string(object *arguments) {
+  object *number;
+  char buf[15];                  // is this a large enough buffer?  auto-calc size?
+  number = car(arguments);
+
+  if (cdr(arguments) == the_empty_list) {
+    sprintf(buf, "%ld", number->data.fixnum.value);
+    return make_string(buf);
+  }
+  else {
+    error("Bases other than 10 not supported yet");
+    //itoa(number->data.fixnum.value, buf, (cadr(arguments))->data.fixnum.value);
+    //return make_string(buf);
+  }
+}
+
+//  string->number
+
+object *p_string_to_number(object *arguments) {
+  return make_fixnum(atol(car(arguments)->data.string.value));
+}
 
 /** ***************************************************************************
 **                                   REPL
@@ -1458,7 +1491,10 @@ void populate_global_environment(void) {
   
   
   // Type Procedures
-  add_procedure("type", p_type);
+  add_procedure("type",           p_type);
+  add_procedure("type?",          p_typep);
+  add_procedure("number->string", p_number_to_string);
+  add_procedure("string->number", p_string_to_number);
 
 }
 
