@@ -1084,6 +1084,51 @@ object *p_load(object *arguments) {
   return result;
 }
 
+object *p_eqvp(object *arguments) {
+  object *obj_1;
+  object *obj_2;
+  
+  obj_1 = car(arguments);
+  obj_2 = cadr(arguments);
+  
+  if (obj_1->type != obj_2->type) {
+    return False;
+  }
+  
+  switch (obj_1->type) {
+    
+    case THE_EMPTY_LIST:
+      return True;
+      break;
+    
+    case FIXNUM:
+      return (obj_1->data.fixnum.value == 
+              obj_2->data.fixnum.value) ? 
+              True : False;
+      break;
+      
+    case CHARACTER:
+      return (obj_1->data.character.value ==
+              obj_2->data.character.value) ?
+              True : False;
+      break;
+    
+    case SYMBOL:
+      return (obj_1->data.symbol.value ==
+              obj_2->data.symbol.value) ?
+              True : False;
+      break;
+    
+    case PRIMITIVE_PROCEDURE:
+    case COMPOUND_PROCEDURE:
+    case BOOLEAN: 
+    case STRING:
+    case PAIR:
+      return (obj_1 == obj_2) ? True : False;
+      break;
+  }
+  
+}
 
 /*  List Procedures
 ************************************************/
@@ -1253,6 +1298,7 @@ void populate_global_environment(void) {
   add_procedure("print", p_print);
   add_procedure("load",  p_load);
   
+  add_procedure("eqv?",  p_eqvp);
   
   // List Procedures
   add_procedure("null?", p_nullp);
