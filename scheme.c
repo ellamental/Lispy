@@ -40,7 +40,7 @@
 
 typedef enum {THE_EMPTY_LIST, FIXNUM, BOOLEAN, VOID,
               CHARACTER, STRING, SYMBOL, PAIR, 
-              PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE} object_type;
+              PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO} object_type;
 
 typedef struct object {
   object_type type;
@@ -72,6 +72,9 @@ typedef struct object {
       struct object *body;
       struct object *env;
     } compound_procedure;
+    struct {                                  // MACRO
+      struct object *transformer;
+    } macro;
   } data;
 } object;
 
@@ -92,6 +95,7 @@ object *set_symbol;
 object *if_symbol;
 object *lambda_symbol;
 object *begin_symbol;
+object *define_macro_symbol;
 
 object *the_global_environment;
 
@@ -331,6 +335,20 @@ char is_compound_procedure(object *obj) {
 }
 
 
+/* MACROs
+**************************************/
+
+object *make_macro(object *transformer) {
+  object *obj;
+  obj = alloc_object();
+  obj->type = MACRO;
+  obj->data.macro.transformer = transformer;
+  return obj;
+}
+
+char is_macro(object *obj) {
+  return obj->type == MACRO;
+}
 
 /** ***************************************************************************
 **                             ENVIRONMENTs
@@ -758,6 +776,12 @@ object *text_of_quotation(object *exp) {
   return cadr(exp);
 }
 
+object *quote_macro_arguments(object *exp) {
+  return cons(quote_symbol, 
+              cons(exp, 
+                   the_empty_list));
+}
+
 
 /* set!
 **************************************/
@@ -905,19 +929,31 @@ tailcall:
     exp = car(exp);
     goto tailcall;
   }
+  
+  else if (is_primitive_syntax(exp, define_macro_symbol)) {    // define-macro
+    define_variable(cadr(exp), make_macro(caddr(exp)), env);
+    return Void;
+  }
     
   else if (is_application(exp)) {                         // Application
     procedure = eval(car(exp), env);
-    arguments = list_of_values(cdr(exp), env);
+    //arguments = list_of_values(cdr(exp), env);
     if (is_primitive_procedure(procedure)) {                  // Primitive
-      return (procedure->data.primitive_procedure.fn)(arguments);
+      return (procedure->data.primitive_procedure.fn)(list_of_values(cdr(exp), env));
     }
     else if (is_compound_procedure(procedure)) {              // Compound
       env = extend_environment(procedure->data.compound_procedure.parameters,
-                               arguments,
+                               list_of_values(cdr(exp), env),
                                procedure->data.compound_procedure.env);
       // Transform lambda body into begin form
       exp = cons(begin_symbol, procedure->data.compound_procedure.body);
+      goto tailcall;
+    }
+    else if (is_macro(procedure)) {                           // Macro
+      exp =  eval(cons(procedure->data.macro.transformer, 
+                       cons(quote_macro_arguments(cdr(exp)),
+                            the_empty_list)),
+                  env);
       goto tailcall;
     }
     else {
@@ -1022,11 +1058,20 @@ void write(object *obj) {
       break;
 
     case PRIMITIVE_PROCEDURE:                         // PRIMITIVE_PROCEDURE
-      // Fall through to COMPOUND_PROCEDURE
+      printf("#<primitive>");
+      break;
+      
     case COMPOUND_PROCEDURE:                          // COMPOUND_PROCEDURE
-      printf("#<procedure>");
+      printf("#<procedure> ");
+      write(obj->data.compound_procedure.parameters); printf("  ");
+      write(obj->data.compound_procedure.body);
       break;
     
+    case MACRO:                                       // MACRO
+      printf("#<macro> ");
+      write(obj->data.macro.transformer);
+      break;
+      
     case VOID:                                        // VOID
       break;
 
@@ -1482,6 +1527,7 @@ void populate_global_environment(void) {
   if_symbol = make_symbol("if");
   lambda_symbol = make_symbol("lambda");
   begin_symbol = make_symbol("begin");
+  define_macro_symbol = make_symbol("define-macro");
 
   
   /* Primitive Procedures
