@@ -885,42 +885,61 @@ object *list_of_values(object *exps, object *env) {
 /* eval
 **************************************/
 
+// h_length is used to check length of arguments
+object *h_length(object *obj);
+
 object *eval(object *exp, object *env) {
   object *procedure;
   object *arguments;
 
 tailcall:
-  if (is_self_evaluating(exp)) {                          // Self-Evaluating
+
+  /**  Self-Evaluating  **/
+  if (is_self_evaluating(exp)) {
     return exp;
   }
-  else if (is_symbol(exp)) {                              // Symbol
+
+  /**  Symbol  **/
+  else if (is_symbol(exp)) {
     return lookup_variable_value(exp, env);
   }
-  else if (is_quoted(exp)) {                              // quote
+
+  /**  quote  **/
+  else if (is_quoted(exp)) {
     return text_of_quotation(exp);
   }
-  else if (is_assignment(exp)) {                          // set!
+
+  /**  set!  **/
+  else if (is_assignment(exp)) {
     set_variable_value(assignment_variable(exp),
                        eval(assignment_value(exp), env),
                        env);
     return Void;
   }
-  else if (is_definition(exp)) {                          // define
+
+  /**  define  **/
+  else if (is_definition(exp)) {
     define_variable(definition_variable(exp),
                     eval(definition_value(exp), env),
                     env);
     return Void;
   }
-  else if (is_if(exp)) {                                  // if
+
+  /**  if  **/
+  else if (is_if(exp)) {
     exp = is_true(eval(cadr(exp), env)) ?
             caddr(exp) :
             cadddr(exp);
     goto tailcall;
   }
-  else if (is_lambda(exp)) {                              // lambda
+
+  /**  lambda  **/
+  else if (is_lambda(exp)) {
     return make_compound_procedure(cadr(exp), cddr(exp), env);
   }
-  else if (is_primitive_syntax(exp, begin_symbol)) {           // begin
+
+  /**  begin  **/
+  else if (is_primitive_syntax(exp, begin_symbol)) {
     exp = cdr(exp);
     while (!is_last_exp(exp)) {
       eval(car(exp), env);
@@ -930,32 +949,47 @@ tailcall:
     goto tailcall;
   }
   
-  else if (is_primitive_syntax(exp, define_macro_symbol)) {    // define-macro
+  /**  define-macro  **/
+  else if (is_primitive_syntax(exp, define_macro_symbol)) {
     define_variable(cadr(exp), make_macro(caddr(exp)), env);
     return Void;
   }
     
-  else if (is_application(exp)) {                         // Application
+  /**  Application  **/
+  else if (is_application(exp)) {
     procedure = eval(car(exp), env);
     //arguments = list_of_values(cdr(exp), env);
-    if (is_primitive_procedure(procedure)) {                  // Primitive
+    
+    /**  Primitive  **/
+    if (is_primitive_procedure(procedure)) {
       return (procedure->data.primitive_procedure.fn)(list_of_values(cdr(exp), env));
     }
-    else if (is_compound_procedure(procedure)) {              // Compound
+    
+    /**  Compound  **/
+    else if (is_compound_procedure(procedure)) {
+      // Check argument length (< = error) (> = extra arguments are not used)
+      if (h_length(cdr(exp))->data.fixnum.value < h_length(procedure->data.compound_procedure.parameters)->data.fixnum.value) {
+        error("Not enough arguments");}
+      
       env = extend_environment(procedure->data.compound_procedure.parameters,
                                list_of_values(cdr(exp), env),
                                procedure->data.compound_procedure.env);
+      
       // Transform lambda body into begin form
       exp = cons(begin_symbol, procedure->data.compound_procedure.body);
       goto tailcall;
     }
-    else if (is_macro(procedure)) {                           // Macro
+    
+    /**  Macro  **/ 
+    else if (is_macro(procedure)) {
+      // Expand macro by passing the arguments to the transformer unevaluated
       exp =  eval(cons(procedure->data.macro.transformer, 
                        cons(quote_macro_arguments(cdr(exp)),
                             the_empty_list)),
                   env);
       goto tailcall;
     }
+    
     else {
       error("Unknown procedure type\n");
     }
@@ -965,6 +999,7 @@ tailcall:
     error("cannot eval unknown expression");
     exit(1);
   }
+  
   error("eval illegal state\n");
 }
 
@@ -1587,6 +1622,14 @@ void populate_global_environment(void) {
 /* REPL
 **************************************/
 
+int REPL(void) {
+  while (1) {
+    printf("> ");
+    write(eval(read(stdin), the_global_environment));
+    printf("\n");
+  }
+}
+
 int main(void) {
 
   printf("****************************************\n"
@@ -1599,12 +1642,8 @@ int main(void) {
   init();
   populate_global_environment();
   
-  while (1) {
-    printf("> ");
-    write(eval(read(stdin), the_global_environment));
-    printf("\n");
-  }
-
+  REPL();
+  
   return 0;
 }
 
