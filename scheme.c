@@ -31,7 +31,8 @@
 #include <ctype.h>
 
 // Report Error and Terminate
-#define error(args...) fprintf(stderr, args); exit(1)
+void REPL(void);
+#define error(args...) fprintf(stderr, args); printf("\n"); REPL()
 
 
 /** ***************************************************************************
@@ -881,12 +882,11 @@ object *list_of_values(object *exps, object *env) {
   }
 }
 
+object *h_length(object *obj);    // h_length is used to check length of arguments
+
 
 /* eval
 **************************************/
-
-// h_length is used to check length of arguments
-object *h_length(object *obj);
 
 object *eval(object *exp, object *env) {
   object *procedure;
@@ -1622,7 +1622,7 @@ void populate_global_environment(void) {
 /* REPL
 **************************************/
 
-int REPL(void) {
+void REPL(void) {
   while (1) {
     printf("> ");
     write(eval(read(stdin), the_global_environment));
