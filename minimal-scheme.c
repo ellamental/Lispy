@@ -1037,11 +1037,7 @@ void write(object *obj) {
 
 /** ***************************************************************************
 **                           Primitive Procedures
-*******************************************************************************
-** Primitive procedures are prefixed with p_
-** Helper procedures are prefixed with h_ and are for internal use.
-** Predicates (like equal? or number?) end with a p (p_equalp, p_numberp)
-**/
+******************************************************************************/
 
 /*  I/O
 *************************************************/
@@ -1088,14 +1084,9 @@ object *p_load(object *arguments) {
   return result;
 }
 
+
 /*  List Procedures
 ************************************************/
-
-//  list
-
-object *p_list(object *arguments) {
-  return arguments;
-}
 
 //  null?
 
@@ -1121,144 +1112,6 @@ object *p_car(object *arguments) {
 
 object *p_cdr(object *arguments) {
   return cdr(car(arguments));
-}
-
-//  length
-
-object *h_length(object *lst) {
-  int count = 1;
-  
-  if (lst == the_empty_list) {
-    return make_fixnum(0);
-  }
-  while (cdr(lst) != the_empty_list) {
-    count += 1;
-    lst = cdr(lst);
-  }
-  return make_fixnum(count);
-}
-
-object *p_length(object *arguments) {
-  h_length(car(arguments));
-}
-
-
-/*  Equality Procedures
-************************************************/
-
-//  eqv?
-
-object *p_eqvp(object *arguments) {
-  object *obj_1;
-  object *obj_2;
-  
-  obj_1 = car(arguments);
-  obj_2 = cadr(arguments);
-  
-  if (obj_1->type != obj_2->type) {
-    return False;
-  }
-  
-  switch (obj_1->type) {
-    
-    case THE_EMPTY_LIST:
-      return True;
-      break;
-    
-    case FIXNUM:
-      return (obj_1->data.fixnum.value == 
-              obj_2->data.fixnum.value) ? 
-              True : False;
-      break;
-      
-    case CHARACTER:
-      return (obj_1->data.character.value ==
-              obj_2->data.character.value) ?
-              True : False;
-      break;
-    
-    case SYMBOL:
-      return (obj_1->data.symbol.value ==
-              obj_2->data.symbol.value) ?
-              True : False;
-      break;
-    
-    case PRIMITIVE_PROCEDURE:
-    case COMPOUND_PROCEDURE:
-    case BOOLEAN: 
-    case STRING:
-    case PAIR:
-      return (obj_1 == obj_2) ? True : False;
-      break;
-  }
-}
-
-
-//  equal?
-
-object *h_equalp(object *obj_1, object *obj_2) {
-  object *result;
-  object *temp_1;
-  object *temp_2;
-  
-  if (obj_1->type != obj_2->type) {
-    return False;
-  }
-
-  switch (obj_1->type) {
-    case THE_EMPTY_LIST:
-      return True;
-      break;
-    
-    case FIXNUM:
-      return (obj_1->data.fixnum.value == 
-              obj_2->data.fixnum.value) ? 
-              True : False;
-      break;
-      
-    case CHARACTER:
-      return (obj_1->data.character.value ==
-              obj_2->data.character.value) ?
-              True : False;
-      break;
-    
-    case SYMBOL:
-      return (obj_1->data.symbol.value ==
-              obj_2->data.symbol.value) ?
-              True : False;
-      break;
-    
-    case PRIMITIVE_PROCEDURE:
-    case COMPOUND_PROCEDURE:
-    case BOOLEAN:
-      return (obj_1 == obj_2) ? True : False;
-    
-    case STRING:
-      return !strcmp(obj_1->data.string.value, obj_2->data.string.value) ? 
-             True : False;
-      break;
-    
-    case PAIR:
-      if (h_length(obj_1)->data.fixnum.value != 
-          h_length(obj_2)->data.fixnum.value) {
-        return False;}
-      while (obj_1 != the_empty_list) {
-        if (h_equalp(car(obj_1), car(obj_2)) == True) {
-          obj_1 = cdr(obj_1);
-          obj_2 = cdr(obj_2);
-        }
-        else {
-          return False;
-        }
-      }
-      return True;
-    default:
-      error("Unsupported types for equal?");
-  }
-}
-
-object *p_equalp(object *arguments) {
-  h_equalp(car(arguments), cadr(arguments));
 }
 
 
@@ -1342,101 +1195,6 @@ object *p_less_than(object *arguments) {
 }
 
 
-/*  Type Procedures
-************************************************/
-
-//  type
-
-object *h_type(object *obj) {
-  
-  switch (obj->type) {
-    case THE_EMPTY_LIST:
-      return cons(make_string("'()"), the_empty_list);
-    
-    case BOOLEAN:
-      return cons(make_string("boolean"), the_empty_list);
-      
-    case CHARACTER:
-      return cons(make_string("character"), the_empty_list);
-      
-    case SYMBOL:
-      return cons(make_string("symbol"), the_empty_list);
-      
-    case FIXNUM:
-      return cons(make_string("number"), cons(make_string("integer"), the_empty_list));
-      
-    case PRIMITIVE_PROCEDURE:
-      return cons(make_string("procedure"), cons(make_string("primitive"), the_empty_list));
-    
-    case COMPOUND_PROCEDURE:
-      return cons(make_string("procedure"), cons(make_string("compound"), the_empty_list));
- 
-    case STRING:
-      return cons(make_string("sequence"), cons(make_string("string"), the_empty_list));
-    
-    case PAIR:
-      return cons(make_string("sequence"), cons(make_string("pair"), the_empty_list));
-  }
-}
-
-object *p_type(object *arguments) {
-  h_type(car(arguments));
-}
-
-//  type?
-
-object *p_typep(object *arguments) {
-  h_equalp(h_type(car(arguments)), h_type(cadr(arguments)));
-}
-
-// number->string
-
-object *p_number_to_string(object *arguments) {
-  object *number;
-  char buf[15];                  // is this a large enough buffer?  auto-calc size?
-  number = car(arguments);
-
-  if (cdr(arguments) == the_empty_list) {
-    sprintf(buf, "%ld", number->data.fixnum.value);
-    return make_string(buf);
-  }
-  else {
-    error("Bases other than 10 not supported yet");
-    //itoa(number->data.fixnum.value, buf, (cadr(arguments))->data.fixnum.value);
-    //return make_string(buf);
-  }
-}
-
-//  string->number
-
-object *p_string_to_number(object *arguments) {
-  return make_fixnum(atol(car(arguments)->data.string.value));
-}
-
-//  symbol->string
-
-object *p_symbol_to_string(object *arguments) {
-  return make_string(car(arguments)->data.symbol.value);
-}
-
-//  string->symbol
-
-object *p_string_to_symbol(object *arguments) {
-  return make_symbol(car(arguments)->data.string.value);
-}
-
-//  char->integer
-
-object *p_char_to_integer(object *arguments) {
-  return make_fixnum(car(arguments)->data.character.value);
-}
-
-//  integer->char
-
-object *p_integer_to_char(object *arguments) {
-  return make_character(car(arguments)->data.fixnum.value);
-}
-
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -1497,44 +1255,22 @@ void populate_global_environment(void) {
   
   
   // List Procedures
-  add_procedure("list",   p_list);
-  add_procedure("null?",  p_nullp);
-  add_procedure("cons",   p_cons);
-  add_procedure("car",    p_car);
-  add_procedure("cdr",    p_cdr);
-  add_procedure("length", p_length);
+  add_procedure("null?", p_nullp);
+  add_procedure("cons",  p_cons);
+  add_procedure("car",   p_car);
+  add_procedure("cdr",   p_cdr);
 
-  
-  // Equality Procedures
-  add_procedure("eqv?",   p_eqvp);
-  add_procedure("equal?", p_equalp);
-  
   
   // Numeric Procedures
-  add_procedure("=", p_numeric_equal);
-  add_procedure("+", p_add);
-  add_procedure("-", p_sub);
-  add_procedure("*", p_mul);
-  add_procedure("/", p_div);
+  add_procedure("=" , p_numeric_equal);
+  add_procedure("+" , p_add);
+  add_procedure("-" , p_sub);
+  add_procedure("*" , p_mul);
+  add_procedure("/" , p_div);
 
-  add_procedure(">", p_greater_than);
-  add_procedure("<", p_less_than);
-  
-  
-  // Type Procedures
-  add_procedure("type",           p_type);
-  add_procedure("type?",          p_typep);
+  add_procedure(">" , p_greater_than);
+  add_procedure("<" , p_less_than);
 
-  add_procedure("number->string", p_number_to_string);
-  add_procedure("string->number", p_string_to_number);
-  add_procedure("symbol->string", p_symbol_to_string);
-  add_procedure("string->symbol", p_string_to_symbol);
-  
-  add_procedure("char->integer", p_char_to_integer);
-  add_procedure("integer->char", p_integer_to_char);
-  
-  // Character Procedures
-  
 }
 
 
