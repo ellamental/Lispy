@@ -94,6 +94,8 @@ object *quote_symbol;
 object *define_symbol;
 object *set_symbol;
 object *if_symbol;
+object *cond_symbol;
+object *else_symbol;
 object *lambda_symbol;
 object *begin_symbol;
 object *define_macro_symbol;
@@ -858,6 +860,35 @@ char is_if(object *expression) {
   return is_primitive_syntax(expression, if_symbol);
 }
 
+object *make_if(object *test, object *consequent, object *alternative) {
+  return cons(if_symbol,
+              cons(test,
+                   cons(consequent,
+                        cons(alternative,
+                             the_empty_list))));
+}
+
+/* cond
+**************************************/
+
+object *make_cond(object *clauses) {
+  object *first;
+  object *rest;
+  
+  first = car(clauses);
+  rest = cdr(clauses);
+  
+  if (clauses == the_empty_list) {
+    return False;
+  }
+  else if (car(first) == else_symbol) {
+    return cadr(first);            // Does not check that else is last clause
+  }
+  else {
+    return make_if(car(first), cadr(first), make_cond(rest));
+  }
+}
+
 
 /* Application of Primitive Procedures
 **************************************/
@@ -930,6 +961,12 @@ tailcall:
     exp = is_true(eval(cadr(exp), env)) ?
             caddr(exp) :
             cadddr(exp);
+    goto tailcall;
+  }
+
+  /**  cond  **/
+  else if (is_primitive_syntax(exp, cond_symbol)) {
+    exp = make_cond(cdr(exp));
     goto tailcall;
   }
 
@@ -1560,6 +1597,8 @@ void populate_global_environment(void) {
   set_symbol = make_symbol("set!");
   define_symbol = make_symbol("define");
   if_symbol = make_symbol("if");
+  cond_symbol = make_symbol("cond");
+  else_symbol = make_symbol("else");
   lambda_symbol = make_symbol("lambda");
   begin_symbol = make_symbol("begin");
   define_macro_symbol = make_symbol("define-macro");
