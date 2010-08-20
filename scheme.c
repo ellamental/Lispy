@@ -98,6 +98,7 @@ object *cond_symbol;
 object *else_symbol;
 object *lambda_symbol;
 object *begin_symbol;
+object *let_symbol;
 object *define_macro_symbol;
 
 object *the_global_environment;
@@ -868,6 +869,7 @@ object *make_if(object *test, object *consequent, object *alternative) {
                              the_empty_list))));
 }
 
+
 /* cond
 **************************************/
 
@@ -887,6 +889,33 @@ object *make_cond(object *clauses) {
   else {
     return make_if(car(first), cadr(first), make_cond(rest));
   }
+}
+
+
+/* let
+**************************************/
+
+object *make_let(object *exp) {
+  object *bindings;
+  object *body;
+  object *params;
+  object *values;
+  object *first_binding;
+  
+  bindings = car(exp);
+  first_binding = car(bindings);
+  body = cdr(exp);
+  params = the_empty_list;
+  values = the_empty_list;
+  
+  while (bindings != the_empty_list) {
+    params = cons(car(first_binding), params);
+    values = cons(cadr(first_binding), values);
+    bindings = cdr(bindings);
+    first_binding = car(bindings);
+  }
+  
+  return cons(make_lambda(params, body), values);
 }
 
 
@@ -983,6 +1012,12 @@ tailcall:
       exp = cdr(exp);
     }
     exp = car(exp);
+    goto tailcall;
+  }
+  
+  /**  let  **/
+  else if (is_primitive_syntax(exp, let_symbol)) {
+    exp = make_let(cdr(exp));
     goto tailcall;
   }
   
@@ -1601,6 +1636,7 @@ void populate_global_environment(void) {
   else_symbol = make_symbol("else");
   lambda_symbol = make_symbol("lambda");
   begin_symbol = make_symbol("begin");
+  let_symbol = make_symbol("let");
   define_macro_symbol = make_symbol("define-macro");
 
   
