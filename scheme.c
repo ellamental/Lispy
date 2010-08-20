@@ -100,6 +100,7 @@ object *lambda_symbol;
 object *begin_symbol;
 object *let_symbol;
 object *define_macro_symbol;
+object *test_symbol;
 
 object *the_global_environment;
 
@@ -874,11 +875,8 @@ object *make_if(object *test, object *consequent, object *alternative) {
 **************************************/
 
 object *make_cond(object *clauses) {
-  object *first;
-  object *rest;
-  
-  first = car(clauses);
-  rest = cdr(clauses);
+  object *first = car(clauses);
+  object *rest = cdr(clauses);
   
   if (clauses == the_empty_list) {
     return False;
@@ -896,17 +894,11 @@ object *make_cond(object *clauses) {
 **************************************/
 
 object *make_let(object *exp) {
-  object *bindings;
-  object *body;
-  object *params;
-  object *values;
-  object *first_binding;
-  
-  bindings = car(exp);
-  first_binding = car(bindings);
-  body = cdr(exp);
-  params = the_empty_list;
-  values = the_empty_list;
+  object *bindings = car(exp);
+  object *first_binding = car(bindings);
+  object *body = cdr(exp);
+  object *params = the_empty_list;
+  object *values = the_empty_list;
   
   while (bindings != the_empty_list) {
     params = cons(car(first_binding), params);
@@ -918,6 +910,28 @@ object *make_let(object *exp) {
   return cons(make_lambda(params, body), values);
 }
 
+
+/* test
+**************************************/
+object *h_equalp(object *obj_1, object *obj_2);
+
+object *test(object *exp) {
+  object *test_case;
+  object *expected;
+  
+  while (exp != the_empty_list) {
+    test_case = car(exp);
+    expected = cadr(exp);
+
+    if (h_equalp(test_case, expected) == False) {
+      write(test_case);
+      printf("\n!= ");
+      write(expected); printf("\n");
+    }
+    exp = cddr(exp);
+  }
+  return Void;
+}
 
 /* Application of Primitive Procedures
 **************************************/
@@ -1026,7 +1040,12 @@ tailcall:
     define_variable(cadr(exp), make_macro(caddr(exp)), env);
     return Void;
   }
-    
+
+  /**  test  **/
+  else if (is_primitive_syntax(exp, test_symbol)) {
+    return test(cdr(exp));
+  }
+
   /**  Application  **/
   else if (is_application(exp)) {
     procedure = eval(car(exp), env);
@@ -1638,6 +1657,7 @@ void populate_global_environment(void) {
   begin_symbol = make_symbol("begin");
   let_symbol = make_symbol("let");
   define_macro_symbol = make_symbol("define-macro");
+  test_symbol = make_symbol("test");
 
   
   /* Primitive Procedures
