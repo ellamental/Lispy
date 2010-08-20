@@ -1718,10 +1718,17 @@ void populate_global_environment(void) {
 **************************************/
 
 void REPL(void) {
+  object *input;
+  object *output;
+  
   while (1) {
     printf("> ");
-    write(eval(read(stdin), the_global_environment));
-    printf("\n");
+    input = read(stdin);
+    output = eval(input, the_global_environment);
+    if (output != Void) {
+      write(output);
+      printf("\n");
+    }
   }
 }
 
