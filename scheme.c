@@ -921,14 +921,14 @@ object *test(object *exp) {
   
   while (exp != the_empty_list) {
     test_case = car(exp);
-    expected = cadr(exp);
+    expected = caddr(exp);
 
     if (h_equalp(test_case, expected) == False) {
       write(test_case);
       printf("\n!= ");
       write(expected); printf("\n");
     }
-    exp = cddr(exp);
+    exp = cdddr(exp);
   }
   return Void;
 }
