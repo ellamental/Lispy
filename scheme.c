@@ -1442,6 +1442,13 @@ object *p_equalp(object *arguments) {
 }
 
 
+//  not
+
+object *p_not(object *exp) {
+  return (car(exp) == False) ? True : False;
+}
+
+
 /*  Numeric Procedures
 ************************************************/
 
@@ -1456,6 +1463,7 @@ object *p_numeric_equal(object *arguments) {
   }
 }
 
+
 //  +
 
 object *p_add(object *arguments) {
@@ -1467,6 +1475,7 @@ object *p_add(object *arguments) {
   }
   return make_fixnum(result);
 }
+
 
 //  -
 
@@ -1480,6 +1489,7 @@ object *p_sub(object *arguments) {
   return make_fixnum(result);
 }
 
+
 //  *
 
 object *p_mul(object *arguments) {
@@ -1491,6 +1501,7 @@ object *p_mul(object *arguments) {
   }
   return make_fixnum(result);
 }
+
 
 //  /
 
@@ -1505,6 +1516,7 @@ object *p_div(object *arguments) {
   return make_fixnum(result);
 }
 
+
 //  >
 
 object *p_greater_than(object *arguments) {
@@ -1513,10 +1525,29 @@ object *p_greater_than(object *arguments) {
   else {return False;}
 }
 
+
 //  <
 
 object *p_less_than(object *arguments) {
   if (car(arguments)->data.fixnum.value < cadr(arguments)->data.fixnum.value) {
+    return True;}
+  else {return False;}
+}
+
+
+//  >=
+
+object *p_greater_than_or_eq(object *arguments) {
+  if (car(arguments)->data.fixnum.value >= cadr(arguments)->data.fixnum.value) {
+    return True;}
+  else {return False;}
+}
+
+
+//  <=
+
+object *p_less_than_or_eq(object *arguments) {
+  if (car(arguments)->data.fixnum.value <= cadr(arguments)->data.fixnum.value) {
     return True;}
   else {return False;}
 }
@@ -1617,6 +1648,8 @@ object *p_integer_to_char(object *arguments) {
   return make_character(car(arguments)->data.fixnum.value);
 }
 
+
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -1693,6 +1726,7 @@ void populate_global_environment(void) {
   // Equality Procedures
   add_procedure("eqv?",   p_eqvp);
   add_procedure("equal?", p_equalp);
+  add_procedure("not",    p_not);
   
   
   // Numeric Procedures
@@ -1704,7 +1738,9 @@ void populate_global_environment(void) {
 
   add_procedure(">", p_greater_than);
   add_procedure("<", p_less_than);
-  
+  add_procedure(">=", p_greater_than_or_eq);
+  add_procedure("<=", p_less_than_or_eq);
+
   
   // Type Procedures
   add_procedure("type",           p_type);
