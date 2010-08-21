@@ -914,16 +914,23 @@ object *make_let(object *exp) {
 /* test
 **************************************/
 object *h_equalp(object *obj_1, object *obj_2);
+object *eval(object *exp, object *env);
 
 object *test(object *exp) {
   object *test_case;
   object *expected;
-  
+  object *result;
+  object *env = extend_environment(the_empty_list,
+                                   the_empty_list,
+                                   the_global_environment);
+
   while (exp != the_empty_list) {
     test_case = car(exp);
     expected = caddr(exp);
 
-    if (h_equalp(test_case, expected) == False) {
+    result = h_equalp(eval(test_case, env), eval(expected, env));
+    
+    if (result == False) {
       write(test_case);
       printf("\n!= ");
       write(expected); printf("\n");
@@ -944,7 +951,6 @@ char is_application(object *exp) {
 /* eval arguments
 **************************************/
 
-object *eval(object *exp, object *env);
 
 object *list_of_values(object *exps, object *env) {
   if (is_the_empty_list(exps)) {
@@ -1332,6 +1338,7 @@ object *p_eqvp(object *arguments) {
   
   switch (obj_1->type) {
     
+    case VOID:
     case THE_EMPTY_LIST:
       return True;
       break;
@@ -1377,6 +1384,7 @@ object *h_equalp(object *obj_1, object *obj_2) {
   }
 
   switch (obj_1->type) {
+    case VOID:
     case THE_EMPTY_LIST:
       return True;
       break;
@@ -1423,6 +1431,7 @@ object *h_equalp(object *obj_1, object *obj_2) {
         }
       }
       return True;
+          
     default:
       error("Unsupported types for equal?");
   }
@@ -1743,6 +1752,10 @@ int main(void) {
 
   init();
   populate_global_environment();
+  
+  // Load and run unit tests
+  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.scm"),
+              the_empty_list));
   
   REPL();
   
