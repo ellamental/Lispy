@@ -1010,6 +1010,7 @@ tailcall:
   else if (is_if(exp)) {
     exp = is_true(eval(cadr(exp), env)) ?
             caddr(exp) :
+            // Handle (if test consequent else alternative)
             (cadddr(exp) == else_symbol) ?
               caddddr(exp) :
               cadddr(exp);
@@ -1267,6 +1268,7 @@ object *p_load(object *arguments) {
   fclose(in);
   return result;
 }
+
 
 /*  List Procedures
 ************************************************/
@@ -1652,6 +1654,42 @@ object *p_integer_to_char(object *arguments) {
 }
 
 
+/*  Sequence Procedures
+************************************************/
+
+//  first
+
+object *h_first(object *seq) {
+  switch (seq->type) {
+    case PAIR:
+      return car(seq);
+      break;
+    case STRING:
+      return make_character(seq->data.string.value[0]);
+      break;
+  }
+}
+
+object *p_first(object *arguments) {
+  return h_first(car(arguments));
+}
+
+//  rest
+
+object *h_rest(object *seq) {
+  switch (seq->type) {
+    case PAIR:
+      return cdr(seq);
+      break;
+    case STRING:
+      return make_string(&seq->data.string.value[1]);
+      break;
+  }
+}
+
+object *p_rest(object *arguments) {
+  return h_rest(car(arguments));
+}
 
 /** ***************************************************************************
 **                                   REPL
@@ -1757,7 +1795,9 @@ void populate_global_environment(void) {
   add_procedure("char->integer", p_char_to_integer);
   add_procedure("integer->char", p_integer_to_char);
   
-  // Character Procedures
+  // Sequence Procedures
+  add_procedure("first", p_first);
+  add_procedure("rest",  p_rest);
   
 }
 
