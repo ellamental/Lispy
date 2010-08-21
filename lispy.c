@@ -302,6 +302,7 @@ object *set_cdr(object *obj, object* value) {
 #define cddadr(obj) cdr(cdr(car(cdr(obj))))
 #define cdddar(obj) cdr(cdr(cdr(car(obj))))
 #define cddddr(obj) cdr(cdr(cdr(cdr(obj))))
+#define caddddr(obj) car(cdr(cdr(cdr(cdr(obj)))))
 
 
 /* PRIMITIVE_PROCEDUREs
@@ -1009,7 +1010,9 @@ tailcall:
   else if (is_if(exp)) {
     exp = is_true(eval(cadr(exp), env)) ?
             caddr(exp) :
-            cadddr(exp);
+            (cadddr(exp) == else_symbol) ?
+              caddddr(exp) :
+              cadddr(exp);
     goto tailcall;
   }
 
