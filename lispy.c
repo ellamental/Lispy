@@ -72,6 +72,7 @@ typedef struct object {
       struct object *parameters;
       struct object *body;
       struct object *env;
+      struct object *doc_string;
     } compound_procedure;
     struct {                                  // MACRO
       struct object *transformer;
@@ -326,13 +327,14 @@ char is_primitive_procedure(object *obj) {
 **************************************/
 
 object *make_compound_procedure(object *parameters, object *arguments,
-                                object* env) {
+                                object* env, object *doc_string) {
   object *obj;
   obj = alloc_object();
   obj->type = COMPOUND_PROCEDURE;
   obj->data.compound_procedure.parameters = parameters;
   obj->data.compound_procedure.body = arguments;
   obj->data.compound_procedure.env = env;
+  obj->data.compound_procedure.doc_string = doc_string;
   return obj;
 }
 
@@ -1026,8 +1028,14 @@ tailcall:
 
   /**  lambda  **/
   else if (is_lambda(exp)) {
-    return make_compound_procedure(cadr(exp), cddr(exp), env);
+    if (caddr(exp)->type == STRING) {
+      return make_compound_procedure(cadr(exp), cdddr(exp), env, caddr(exp));
+    }
+    else {
+      return make_compound_procedure(cadr(exp), cddr(exp), env, make_string(""));
+    }
   }
+
 
   /**  begin  **/
   else if (is_primitive_syntax(exp, begin_symbol)) {
@@ -1826,7 +1834,9 @@ object *p_length(object *arguments) {
   h_length(car(arguments));
 }
 
-
+object *p_doc(object *arguments) {
+  return car(arguments)->data.compound_procedure.doc_string;
+}
 
 /** ***************************************************************************
 **                                   REPL
@@ -1938,6 +1948,7 @@ void populate_global_environment(void) {
   add_procedure("first", p_first);
   add_procedure("rest",  p_rest);
   
+  add_procedure("doc", p_doc);
 }
 
 
