@@ -480,7 +480,8 @@ char is_delimiter(int c) {
 
 char is_initial(int c) {
   return isalpha(c) || c == '*' || c == '/' || c == '>' ||
-         c == '<'   || c == '=' || c == '?' || c == '!';
+         c == '<'   || c == '=' || c == '?' || c == '!' ||
+         c == '-';
 }
 
 
@@ -1305,26 +1306,6 @@ object *p_cdr(object *arguments) {
   return cdr(car(arguments));
 }
 
-//  length
-
-object *h_length(object *lst) {
-  int count = 1;
-  
-  if (lst == the_empty_list) {
-    return make_fixnum(0);
-  }
-  while (cdr(lst) != the_empty_list) {
-    count += 1;
-    lst = cdr(lst);
-  }
-  return make_fixnum(count);
-}
-
-object *p_length(object *arguments) {
-  h_length(car(arguments));
-}
-
-
 /*  Equality Procedures
 ************************************************/
 
@@ -1760,6 +1741,28 @@ object *p_integer_to_char(object *arguments) {
   return make_character(car(arguments)->data.fixnum.value);
 }
 
+//  ->string
+
+object *h_to_string(object *obj) {
+  char buf[15];                  // is this a large enough buffer?  auto-calc size?
+
+  switch (obj->type) {
+    case FIXNUM:
+      sprintf(buf, "%ld", obj->data.fixnum.value);
+      return make_string(buf);
+      break;
+/*    case CHARACTER:
+      return make_string(obj->data.character.value);
+      break;*/
+    case SYMBOL:
+      return make_string(obj->data.symbol.value);
+      break;
+  }
+}
+
+object *p_to_string(object *arguments) {
+  return h_to_string(car(arguments));
+}
 
 /*  Sequence Procedures
 ************************************************/
@@ -1796,6 +1799,31 @@ object *h_rest(object *seq) {
 
 object *p_rest(object *arguments) {
   return h_rest(car(arguments));
+}
+
+
+//  length
+
+object *h_length(object *obj) {
+  int count = 1;
+  
+  if (obj == the_empty_list) {
+    return make_fixnum(0);
+  }
+  else if (obj->type == PAIR) {
+    while (cdr(obj) != the_empty_list) {
+      count += 1;
+      obj = cdr(obj);
+    }
+    return make_fixnum(count);
+  }
+  else if (obj->type == STRING) {
+    return make_fixnum(strlen(obj->data.string.value));
+  }
+}
+
+object *p_length(object *arguments) {
+  h_length(car(arguments));
 }
 
 
@@ -1903,6 +1931,8 @@ void populate_global_environment(void) {
   
   add_procedure("char->integer", p_char_to_integer);
   add_procedure("integer->char", p_integer_to_char);
+  
+  add_procedure("->string", p_to_string);
   
   // Sequence Procedures
   add_procedure("first", p_first);
