@@ -1471,14 +1471,37 @@ object *p_numeric_equal(object *arguments) {
 
 //  +
 
-object *p_add(object *arguments) {
-  long result = 0;
+object *h_add(object *obj_1, object *obj_2) {
+  char cbuffer[3];
   
-  while (!is_the_empty_list(arguments)) {
-    result += (car(arguments))->data.fixnum.value;
-    arguments = cdr(arguments);
+  if (obj_1->type != obj_2->type) {
+    error("Types must match");
   }
-  return make_fixnum(result);
+  
+  if (obj_1->type == STRING) {
+    int l1 = strlen(obj_1->data.string.value);
+    int l2 = strlen(obj_2->data.string.value);
+    char sbuffer[l1+l2];
+    strcpy(sbuffer, obj_1->data.string.value);
+    strcat(sbuffer, obj_2->data.string.value);
+    return make_string(sbuffer);
+  }    
+  
+  switch (obj_1->type) {
+    case FIXNUM:
+      return make_fixnum(obj_1->data.fixnum.value + obj_2->data.fixnum.value);
+      break;
+    case CHARACTER:
+      cbuffer[0] = obj_1->data.character.value;
+      cbuffer[1] = obj_2->data.character.value;
+      cbuffer[2] = '\0';
+      return make_string(cbuffer);
+
+  }
+}
+
+object *p_add(object *arguments) {
+  h_add(car(arguments), cadr(arguments));
 }
 
 
@@ -1524,38 +1547,122 @@ object *p_div(object *arguments) {
 
 //  >
 
-object *p_greater_than(object *arguments) {
-  if (car(arguments)->data.fixnum.value > cadr(arguments)->data.fixnum.value) {
-    return True;}
-  else {return False;}
+object *h_greater_than(object *obj_1, object *obj_2) {
+  if (obj_1->type != obj_2->type) {
+    error("Types must match");
+  }
+
+  if (obj_1->type == BOOLEAN) {
+    if (obj_1 == obj_2) {return False;}
+    else if (obj_1 == True) {return True;}
+    else if (obj_1 == False) {return False;}
+  }
+
+  else if (obj_1->type == FIXNUM) {
+    return (obj_1->data.fixnum.value > obj_2->data.fixnum.value) ?
+            True : False;
+  }
+  
+  else if (obj_1->type == CHARACTER) {
+    return (obj_1->data.character.value > obj_2->data.character.value) ?
+            True : False;
+  }
+  
+  else if (obj_1->type == STRING) {
+    return (strcmp(obj_1->data.string.value, 
+                   obj_2->data.string.value) == 1) ?
+            True : False;
+  }
+
+  else if (obj_1->type == SYMBOL) {
+    return (strcmp(obj_1->data.symbol.value, 
+                   obj_2->data.symbol.value) == 1) ?
+            True : False;
+  }
+/*  else if (obj_1->type == PAIR) {
+  }
+*/
 }
 
+object *p_greater_than(object *arguments) {
+  return h_greater_than(car(arguments), cadr(arguments));
+}
 
 //  <
 
+object *h_less_than(object *obj_1, object *obj_2) {
+  if (obj_1->type != obj_2->type) {
+    error("Types must match");
+  }
+
+  if (obj_1->type == BOOLEAN) {
+    if (obj_1 == obj_2) {return True;}
+    else if (obj_1 == True) {return False;}
+    else if (obj_1 == False) {return True;}
+  }
+
+  else if (obj_1->type == FIXNUM) {
+    return (obj_1->data.fixnum.value < obj_2->data.fixnum.value) ?
+            True : False;
+  }
+  
+  else if (obj_1->type == CHARACTER) {
+    return (obj_1->data.character.value < obj_2->data.character.value) ?
+            True : False;
+  }
+  
+  else if (obj_1->type == STRING) {
+    return (strcmp(obj_1->data.string.value, 
+                   obj_2->data.string.value) == -1) ?
+            True : False;
+  }
+
+  else if (obj_1->type == SYMBOL) {
+    return (strcmp(obj_1->data.symbol.value, 
+                   obj_2->data.symbol.value) == -1) ?
+            True : False;
+  }
+/*  else if (obj_1->type == PAIR) {
+  }
+*/
+}
+
 object *p_less_than(object *arguments) {
-  if (car(arguments)->data.fixnum.value < cadr(arguments)->data.fixnum.value) {
-    return True;}
-  else {return False;}
+  return h_less_than(car(arguments), cadr(arguments));
 }
 
 
 //  >=
 
+object *h_greater_than_or_eq(object *obj_1, object *obj_2) {
+  if (h_equalp(obj_1, obj_2)) {
+    return True;
+  }
+  else {
+    return h_greater_than(obj_1, obj_2);
+  }
+}
+
 object *p_greater_than_or_eq(object *arguments) {
-  if (car(arguments)->data.fixnum.value >= cadr(arguments)->data.fixnum.value) {
-    return True;}
-  else {return False;}
+  return h_greater_than_or_eq(car(arguments), cadr(arguments));
 }
 
 
 //  <=
 
-object *p_less_than_or_eq(object *arguments) {
-  if (car(arguments)->data.fixnum.value <= cadr(arguments)->data.fixnum.value) {
-    return True;}
-  else {return False;}
+object *h_less_than_or_eq(object *obj_1, object *obj_2) {
+  if (h_equalp(obj_1, obj_2)) {
+    return True;
+  }
+  else {
+    return h_less_than(obj_1, obj_2);
+  }
 }
+
+object *p_less_than_or_eq(object *arguments) {
+  return h_less_than_or_eq(car(arguments), cadr(arguments));
+}
+
 
 
 /*  Type Procedures
@@ -1690,6 +1797,8 @@ object *h_rest(object *seq) {
 object *p_rest(object *arguments) {
   return h_rest(car(arguments));
 }
+
+
 
 /** ***************************************************************************
 **                                   REPL

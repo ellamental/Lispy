@@ -746,14 +746,48 @@
   (rest (rest "hello"))
   >>> "llo"
   
+)
 
 
 
 
+;;  Polymorphic Procedures
+;;_______________________________________________________;;
 
+(test
+  (+ 1 1)
+  >>> 2
+  (+ #\a #\b)
+  >>> "ab"
+  (+ "hello" "world")
+  >>> "helloworld"
+)
 
+(test
+  (> 2 1)
+  >>> True
+  (> True False)
+  >>> True
+  (> #\b #\a)
+  >>> True
+  (> "b" "a")
+  >>> True
+  (> 'b 'a)
+  >>> True
+)
 
-
+(test
+  (< 1 2)
+  >>> True
+  (< False True)
+  >>> True
+  (< #\a #\b)
+  >>> True
+  (< "a" "b")
+  >>> True
+  (< 'a 'b)
+  >>> True
+)
 
 ;;  
 ;;_________________________;;
