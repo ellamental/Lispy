@@ -72,7 +72,7 @@ typedef struct object {
       struct object *parameters;
       struct object *body;
       struct object *env;
-      struct object *doc_string;
+      struct object *docstring;
     } compound_procedure;
     struct {                                  // MACRO
       struct object *transformer;
@@ -327,14 +327,14 @@ char is_primitive_procedure(object *obj) {
 **************************************/
 
 object *make_compound_procedure(object *parameters, object *arguments,
-                                object* env, object *doc_string) {
+                                object* env, object *docstring) {
   object *obj;
   obj = alloc_object();
   obj->type = COMPOUND_PROCEDURE;
   obj->data.compound_procedure.parameters = parameters;
   obj->data.compound_procedure.body = arguments;
   obj->data.compound_procedure.env = env;
-  obj->data.compound_procedure.doc_string = doc_string;
+  obj->data.compound_procedure.docstring = docstring;
   return obj;
 }
 
@@ -1028,11 +1028,12 @@ tailcall:
 
   /**  lambda  **/
   else if (is_lambda(exp)) {
+    // Check for presence of a docstring
     if (caddr(exp)->type == STRING) {
       return make_compound_procedure(cadr(exp), cdddr(exp), env, caddr(exp));
     }
     else {
-      return make_compound_procedure(cadr(exp), cddr(exp), env, make_string(""));
+      return make_compound_procedure(cadr(exp), cddr(exp), env, make_string("No docstring"));
     }
   }
 
@@ -1302,17 +1303,6 @@ object *p_cons(object *arguments) {
   return cons(car(arguments), cadr(arguments));
 }
 
-//  car
-
-object *p_car(object *arguments) {
-  return car(car(arguments));
-}
-
-//  cdr
-
-object *p_cdr(object *arguments) {
-  return cdr(car(arguments));
-}
 
 /*  Equality Procedures
 ************************************************/
@@ -1701,69 +1691,35 @@ object *p_typep(object *arguments) {
   h_equalp(h_type(car(arguments)), h_type(cadr(arguments)));
 }
 
-// number->string
-
-object *p_number_to_string(object *arguments) {
-  object *number;
-  char buf[15];                  // is this a large enough buffer?  auto-calc size?
-  number = car(arguments);
-
-  if (cdr(arguments) == the_empty_list) {
-    sprintf(buf, "%ld", number->data.fixnum.value);
-    return make_string(buf);
-  }
-  else {
-    error("Bases other than 10 not supported yet");
-    //itoa(number->data.fixnum.value, buf, (cadr(arguments))->data.fixnum.value);
-    //return make_string(buf);
-  }
-}
-
-//  string->number
-
-object *p_string_to_number(object *arguments) {
-  return make_fixnum(atol(car(arguments)->data.string.value));
-}
-
-//  symbol->string
-
-object *p_symbol_to_string(object *arguments) {
-  return make_string(car(arguments)->data.symbol.value);
-}
-
-//  string->symbol
-
-object *p_string_to_symbol(object *arguments) {
-  return make_symbol(car(arguments)->data.string.value);
-}
-
-//  char->integer
-
-object *p_char_to_integer(object *arguments) {
-  return make_fixnum(car(arguments)->data.character.value);
-}
-
-//  integer->char
-
-object *p_integer_to_char(object *arguments) {
-  return make_character(car(arguments)->data.fixnum.value);
-}
 
 //  ->string
 
 object *h_to_string(object *obj) {
-  char buf[15];                  // is this a large enough buffer?  auto-calc size?
-
+  char buf[100];                  // is this a large enough buffer?  auto-calc size?
+  char cbuf[2];
+  int count = 0;
+  
   switch (obj->type) {
     case FIXNUM:
       sprintf(buf, "%ld", obj->data.fixnum.value);
       return make_string(buf);
       break;
-/*    case CHARACTER:
-      return make_string(obj->data.character.value);
-      break;*/
+    case CHARACTER:
+      cbuf[0] = obj->data.character.value;
+      cbuf[1] = '\0';
+      return make_string(cbuf);
+      break;
     case SYMBOL:
       return make_string(obj->data.symbol.value);
+      break;
+    case PAIR:  // Should return "(a b c)" for (->string '(#\a #\b #\c))
+      while (obj != the_empty_list) {
+        buf[count] = car(obj)->data.character.value;
+        obj = cdr(obj);
+        count++;
+      }
+      buf[count] = '\0';
+      return make_string(buf);
       break;
   }
 }
@@ -1771,6 +1727,50 @@ object *h_to_string(object *obj) {
 object *p_to_string(object *arguments) {
   return h_to_string(car(arguments));
 }
+
+//  ->number
+
+object *h_to_number(object *obj) {
+  switch (obj->type) {
+    case STRING:
+      return make_fixnum(atol(obj->data.string.value));
+      break;
+    case CHARACTER:
+      return make_fixnum(obj->data.character.value);
+      break;
+  }
+}
+
+object *p_to_number(object *arguments) {
+  return h_to_number(car(arguments));
+}
+
+
+//  ->char
+
+object *h_to_char(object *obj) {
+  object *char_list = the_empty_list;
+  int len;
+  
+  switch (obj->type) {
+    case FIXNUM:
+      return make_character(obj->data.fixnum.value);
+      break;
+    case STRING:
+      len = strlen(obj->data.string.value) - 1;
+      while (len > -1) {
+        char_list = cons(make_character(obj->data.string.value[len]), char_list);
+        len--;
+      }
+      return char_list;
+      break;
+  }
+}
+
+object *p_to_char(object *arguments) {
+  return h_to_char(car(arguments));
+}
+
 
 /*  Sequence Procedures
 ************************************************/
@@ -1835,7 +1835,7 @@ object *p_length(object *arguments) {
 }
 
 object *p_doc(object *arguments) {
-  return car(arguments)->data.compound_procedure.doc_string;
+  return car(arguments)->data.compound_procedure.docstring;
 }
 
 /** ***************************************************************************
@@ -1933,16 +1933,10 @@ void populate_global_environment(void) {
   // Type Procedures
   add_procedure("type",           p_type);
   add_procedure("type?",          p_typep);
-
-  add_procedure("number->string", p_number_to_string);
-  add_procedure("string->number", p_string_to_number);
-  add_procedure("symbol->string", p_symbol_to_string);
-  add_procedure("string->symbol", p_string_to_symbol);
-  
-  add_procedure("char->integer", p_char_to_integer);
-  add_procedure("integer->char", p_integer_to_char);
   
   add_procedure("->string", p_to_string);
+  add_procedure("->number", p_to_number);
+  add_procedure("->char",   p_to_char);
   
   // Sequence Procedures
   add_procedure("first", p_first);
@@ -1983,7 +1977,7 @@ int main(void) {
   populate_global_environment();
   
   // Load and run unit tests
-  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.scm"),
+  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.lispy"),
               the_empty_list));
   
   REPL();
