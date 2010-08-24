@@ -5,6 +5,9 @@
 ** 
 ** Based on Bootstrap Scheme by Peter Michaux:
 ** http://michaux.ca/articles/scheme-from-scratch-introduction
+** 
+** TODO:
+** Add support for FLONUMs to numeric procedures
 ******************************************************************************/
 
 /*
@@ -39,9 +42,10 @@ void REPL(void);
 **                                  Types
 ******************************************************************************/
 
-typedef enum {THE_EMPTY_LIST, FIXNUM, BOOLEAN, VOID,
-              CHARACTER, STRING, SYMBOL, PAIR, 
-              PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO} object_type;
+typedef enum {THE_EMPTY_LIST, BOOLEAN, VOID, CHARACTER, SYMBOL,
+              PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO,
+              FIXNUM, FLONUM,
+              STRING, PAIR} object_type;
 
 typedef struct object {
   object_type type;
@@ -49,6 +53,9 @@ typedef struct object {
     struct {                                  // FIXNUM
       long value;
     } fixnum;
+    struct {                                  // FLONUM
+      double value;
+    } flonum;
     struct {                                  // BOOLEAN
       char value;
     } boolean;
@@ -168,6 +175,23 @@ object *make_fixnum(long value) {
 
 char is_fixnum(object *obj) {
   return obj->type == FIXNUM;
+}
+
+
+/* FLONUMs
+**************************************/
+
+object *make_flonum(double value) {
+  object *obj;
+
+  obj = alloc_object();
+  obj->type = FLONUM;
+  obj->data.flonum.value = value;
+  return obj;
+}
+
+char is_flonum(object *obj) {
+  return obj->type == FLONUM;
 }
 
 
@@ -541,6 +565,8 @@ void read_expected_string(FILE *in, char *str) {
   }
 }
 
+// Read a character
+
 object *read_character(FILE *in) {
   int c;
   
@@ -570,6 +596,38 @@ object *read_character(FILE *in) {
   return make_character(c);
 }
 
+// Read a number
+
+object *read_number(FILE *in) {
+  int c;
+  int count = 0;
+  char buffer[30];
+
+  /* Read until delimiter and store in buffer */
+  while (c = getc(in), !is_delimiter(c)) {
+    buffer[count] = c;
+    count++;
+  }
+  buffer[count] = '\0';
+  ungetc(c, in);
+
+  //  FLONUMs
+  if (strchr(buffer, '.')) {
+    double n = strtof(buffer, NULL);
+    return make_flonum(n);
+  }
+  
+  //  RATIONALs
+  if (strchr(buffer, '/')) {
+    // build a RATIONAL : 3/4
+    error("Rational Numbers not implemented yet.");
+  }
+  
+  //  FIXNUMs
+  else {
+    return make_fixnum(strtol(buffer, NULL, 10));
+  }
+}
 
 /* Read
 **************************************/
@@ -617,8 +675,6 @@ object *read_pair(FILE *in) {
 
 object *read(FILE *in) {
   int c;                         /* Character from input               */
-  short sign = 1;                /* Sign of numerical input            */
-  long num = 0;                  /* Accumulator for numerical input    */
   int i;                         /* Counter for strings                */
   #define BUFFER_MAX 1000        /* Maximum length for string/symbols  */
   char buffer[BUFFER_MAX + 1];   /* Buffer to hold strings/symbols     */
@@ -627,33 +683,12 @@ object *read(FILE *in) {
 
   c = getc(in);
 
-  /* FIXNUMs */
-  if (isdigit(c) || (c == '-' && (isdigit(peek(in))))) {
-    
-    /* Handle Negative Numbers */
-    if (c == '-') {
-      sign = -1;
-    }
-    else {
-      ungetc(c, in);
-    }
-    
-    /* Build a FIXNUM from input */
-    while (isdigit(c = getc(in))) {
-      num = (num * 10) + (c - '0');
-    }
-    
-    /* Apply the sign of the number */
-    num *= sign;
-    
-    /* Check that the number is followed by a delimiter and return FIXNUM */
-    if (is_delimiter(c)) {
-      ungetc(c, in);
-      return make_fixnum(num);
-    }
-    else {
-      error("number not followed by delimiter\n");
-    }
+  /* Numbers */
+  if (isdigit(c) || (c == '-' && (isdigit(peek(in)) ||
+                                  peek(in) == '.')) ||
+                    (c == '.' && (isdigit(peek(in))))) {
+    ungetc(c, in);
+    return read_number(in);
   }
   
   /* BOOLEANs and CHARACTERs */
@@ -754,6 +789,7 @@ object *read(FILE *in) {
 char is_self_evaluating(object *exp) {
   return is_boolean(exp)   ||
          is_fixnum(exp)    ||
+         is_flonum(exp)    ||
          is_character(exp) ||
          is_string(exp)    ||
          exp->type == VOID;
@@ -1147,7 +1183,11 @@ void write(object *obj) {
     case FIXNUM:                                      // FIXNUM
       printf("%ld", obj->data.fixnum.value);
       break;
-      
+    
+    case FLONUM:                                      // FLONUM
+      printf("%f", obj->data.flonum.value);
+      break;
+    
     case BOOLEAN:                                     // BOOLEAN
       printf("%s", is_false(obj) ? "False" : "True");
       break;
@@ -1307,9 +1347,9 @@ object *p_cons(object *arguments) {
 /*  Equality Procedures
 ************************************************/
 
-//  eqv?
+//  is?
 
-object *p_eqvp(object *arguments) {
+object *p_isp(object *arguments) {
   object *obj_1;
   object *obj_2;
   
@@ -1330,6 +1370,12 @@ object *p_eqvp(object *arguments) {
     case FIXNUM:
       return (obj_1->data.fixnum.value == 
               obj_2->data.fixnum.value) ? 
+              True : False;
+      break;
+    
+    case FLONUM:
+      return (obj_1->data.flonum.value ==
+              obj_2->data.flonum.value) ?
               True : False;
       break;
       
@@ -1376,6 +1422,12 @@ object *h_equalp(object *obj_1, object *obj_2) {
     case FIXNUM:
       return (obj_1->data.fixnum.value == 
               obj_2->data.fixnum.value) ? 
+              True : False;
+      break;
+    
+    case FLONUM:
+      return (obj_1->data.flonum.value ==
+              obj_2->data.flonum.value) ?
               True : False;
       break;
       
@@ -1436,18 +1488,6 @@ object *p_not(object *exp) {
 /*  Numeric Procedures
 ************************************************/
 
-//  =
-
-object *p_numeric_equal(object *arguments) {
-  if (car(arguments)->data.fixnum.value == cadr(arguments)->data.fixnum.value) {
-    return True;
-  }
-  else {
-    return False;
-  }
-}
-
-
 //  +
 
 object *h_add(object *obj_1, object *obj_2) {
@@ -1469,6 +1509,9 @@ object *h_add(object *obj_1, object *obj_2) {
   switch (obj_1->type) {
     case FIXNUM:
       return make_fixnum(obj_1->data.fixnum.value + obj_2->data.fixnum.value);
+      break;
+    case FLONUM:
+      return make_flonum(obj_1->data.flonum.value + obj_2->data.flonum.value);
       break;
     case CHARACTER:
       cbuffer[0] = obj_1->data.character.value;
@@ -1541,7 +1584,12 @@ object *h_greater_than(object *obj_1, object *obj_2) {
     return (obj_1->data.fixnum.value > obj_2->data.fixnum.value) ?
             True : False;
   }
-  
+
+  else if (obj_1->type == FLONUM) {
+    return (obj_1->data.flonum.value > obj_2->data.flonum.value) ?
+            True : False;
+  }
+
   else if (obj_1->type == CHARACTER) {
     return (obj_1->data.character.value > obj_2->data.character.value) ?
             True : False;
@@ -1584,7 +1632,12 @@ object *h_less_than(object *obj_1, object *obj_2) {
     return (obj_1->data.fixnum.value < obj_2->data.fixnum.value) ?
             True : False;
   }
-  
+
+  else if (obj_1->type == FLONUM) {
+    return (obj_1->data.flonum.value < obj_2->data.flonum.value) ?
+            True : False;
+  }
+
   else if (obj_1->type == CHARACTER) {
     return (obj_1->data.character.value < obj_2->data.character.value) ?
             True : False;
@@ -1666,7 +1719,10 @@ object *h_type(object *obj) {
       
     case FIXNUM:
       return cons(make_string("number"), cons(make_string("integer"), the_empty_list));
-      
+    
+    case FLONUM:
+      return cons(make_string("number"), cons(make_string("float"), the_empty_list));
+
     case PRIMITIVE_PROCEDURE:
       return cons(make_string("procedure"), cons(make_string("primitive"), the_empty_list));
     
@@ -1704,6 +1760,10 @@ object *h_to_string(object *obj) {
       sprintf(buf, "%ld", obj->data.fixnum.value);
       return make_string(buf);
       break;
+    case FLONUM:
+      sprintf(buf, "%f", obj->data.flonum.value);
+      return make_string(buf);
+      break;
     case CHARACTER:
       cbuf[0] = obj->data.character.value;
       cbuf[1] = '\0';
@@ -1733,7 +1793,15 @@ object *p_to_string(object *arguments) {
 object *h_to_number(object *obj) {
   switch (obj->type) {
     case STRING:
-      return make_fixnum(atol(obj->data.string.value));
+      if (strchr(obj->data.string.value, '.')) {
+        return make_flonum(atof(obj->data.string.value));
+      }
+      else if (strchr(obj->data.string.value, '/')) {
+        error("Rational numbers not implemented yet");
+      }
+      else {
+        return make_fixnum(atol(obj->data.string.value));
+      }
       break;
     case CHARACTER:
       return make_fixnum(obj->data.character.value);
@@ -1834,6 +1902,8 @@ object *p_length(object *arguments) {
   h_length(car(arguments));
 }
 
+//  doc
+
 object *p_doc(object *arguments) {
   return car(arguments)->data.compound_procedure.docstring;
 }
@@ -1906,19 +1976,16 @@ void populate_global_environment(void) {
   add_procedure("list",   p_list);
   add_procedure("null?",  p_nullp);
   add_procedure("cons",   p_cons);
-  add_procedure("car",    p_car);
-  add_procedure("cdr",    p_cdr);
-  add_procedure("length", p_length);
 
   
   // Equality Procedures
-  add_procedure("eqv?",   p_eqvp);
+  add_procedure("is?",   p_isp);
+  add_procedure("=", p_equalp);
   add_procedure("equal?", p_equalp);
   add_procedure("not",    p_not);
   
   
   // Numeric Procedures
-  add_procedure("=", p_numeric_equal);
   add_procedure("+", p_add);
   add_procedure("-", p_sub);
   add_procedure("*", p_mul);
@@ -1941,7 +2008,8 @@ void populate_global_environment(void) {
   // Sequence Procedures
   add_procedure("first", p_first);
   add_procedure("rest",  p_rest);
-  
+  add_procedure("length", p_length);
+
   add_procedure("doc", p_doc);
 }
 
@@ -1985,3 +2053,9 @@ int main(void) {
   return 0;
 }
 
+/*
+Jeff
+13860 W linfield dr
+53151
+262-786-0257
+*/

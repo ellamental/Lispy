@@ -1,4 +1,13 @@
 ;;___________________________________________________________________________;;
+;;  Lispy Unit Tests
+;;  unit_test.lispy
+;;  
+;;  TODO:
+;;  Add tests for FLONUMs to numeric procedures, type, etc...
+;;___________________________________________________________________________;;
+
+
+;;___________________________________________________________________________;;
 ;;  Primitive Syntax
 ;;___________________________________________________________________________;;
 
@@ -141,7 +150,7 @@
   ;; Recursive Procedures
   (define (add1 a-list)
     (if (null? a-list) '()
-                       (cons (+ 1 (car a-list)) (add1 (cdr a-list)))))
+                       (cons (+ 1 (first a-list)) (add1 (rest a-list)))))
   >>> void
   (add1 '(1 2 3))
   >>> '(2 3 4)
@@ -150,7 +159,7 @@
   (define (rev a-list)
     (define (rev-loop a-list result)
       (if (null? a-list) result
-                         (rev-loop (cdr a-list) (cons (car a-list) result))))
+                         (rev-loop (rest a-list) (cons (first a-list) result))))
     (rev-loop a-list '()))
   >>> void
   (rev '(1 2 3))
@@ -293,7 +302,7 @@
 (test
   (define-macro i
     (lambda (exp)
-      (list 'if (car exp) (car exp) (car (cdr exp)))))
+      (list 'if (first exp) (first exp) (first (rest exp)))))
   >>> void
   (i 1 2)
   >>> 1
@@ -381,28 +390,28 @@
 ;;  Equality Procedures
 ;;_______________________________________________________;;
 
-;;  eqv?
+;;  is?
 ;;_________________________;;
 
 (test
-  (eqv? 1 1)
+  (is? 1 1)
   >>> True
-  (eqv? #\c #\c)
+  (is? #\c #\c)
   >>> True
-  (eqv? 'a 'a)
+  (is? 'a 'a)
   >>> True
-  (eqv? False False)
+  (is? False False)
   >>> True
 
-  (eqv? + +)
+  (is? + +)
   >>> True
   (define (a) 42) >>> void
-  (eqv? a a)
+  (is? a a)
   >>> True
   
-  (eqv? "hi" "hi")
+  (is? "hi" "hi")
   >>> False
-  (eqv? '(1) '(1))
+  (is? '(1) '(1))
   >>> False
 )
 
@@ -444,20 +453,6 @@
 
 ;;  Numeric Procedures
 ;;_______________________________________________________;;
-
-;;  =
-;;_________________________;;
-
-(test
-  (= 3 3)
-  >>> True
-  (= 666 666)
-  >>> True
-  (= -5 -5)
-  >>> True
-  (= 10 20)
-  >>> False
-)
 
 
 ;;  -
