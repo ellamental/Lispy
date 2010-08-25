@@ -8,6 +8,7 @@
 ** 
 ** TODO:
 ** Add support for FLONUMs to numeric procedures
+** Refactor eval_arguments (support for variadic procedures)
 ******************************************************************************/
 
 /*
@@ -105,6 +106,7 @@ object *if_symbol;
 object *cond_symbol;
 object *else_symbol;
 object *lambda_symbol;
+object *rest_symbol;
 object *begin_symbol;
 object *let_symbol;
 object *define_macro_symbol;
@@ -507,7 +509,7 @@ char is_delimiter(int c) {
 char is_initial(int c) {
   return isalpha(c) || c == '*' || c == '/' || c == '>' ||
          c == '<'   || c == '=' || c == '?' || c == '!' ||
-         c == '-';
+         c == '-'   || c == '&';
 }
 
 
@@ -1002,6 +1004,49 @@ object *list_of_values(object *exps, object *env) {
   }
 }
 
+object *h_reverse(object *lst) {
+  object *temp_list = the_empty_list;
+  while (lst != the_empty_list) {
+    temp_list = cons(car(lst), temp_list);
+    lst = cdr(lst);
+  }
+  return temp_list;
+}
+
+// This needs some serious refactoring!!!
+// It also needs to check for too few arguments.
+object *eval_arguments(object *args, object *env, object *parameters) {
+  object *result_list = the_empty_list;
+  object *rest_list = the_empty_list;
+  int rest_argument_present = 0;
+  
+  while (parameters != the_empty_list) {
+    if (car(parameters) == rest_symbol) {
+      rest_argument_present = 1;
+      while (args != the_empty_list) {
+        rest_list = cons(eval(car(args), env),
+                         rest_list);
+        args = cdr(args);
+      }
+      break;
+    }
+    else {
+      result_list = cons(eval(car(args), env), 
+                         result_list);
+      args = cdr(args);
+      parameters = cdr(parameters);
+    }
+  }
+  if (!rest_argument_present) {
+    return h_reverse(result_list);
+  }
+  else {
+    rest_list = h_reverse(rest_list);
+    result_list = cons(rest_list, result_list);
+    return h_reverse(result_list);
+  }
+}
+
 object *h_length(object *obj);    // h_length is used to check length of arguments
 
 
@@ -1115,11 +1160,11 @@ tailcall:
     /**  Compound  **/
     else if (is_compound_procedure(procedure)) {
       // Check argument length (< = error) (> = extra arguments are not used)
-      if (h_length(cdr(exp))->data.fixnum.value < h_length(procedure->data.compound_procedure.parameters)->data.fixnum.value) {
-        error("Not enough arguments");}
+      //if (h_length(cdr(exp))->data.fixnum.value < h_length(procedure->data.compound_procedure.parameters)->data.fixnum.value) {
+      //  error("Not enough arguments");}
       
       env = extend_environment(procedure->data.compound_procedure.parameters,
-                               list_of_values(cdr(exp), env),
+                               eval_arguments(cdr(exp), env, procedure->data.compound_procedure.parameters), //list_of_values(cdr(exp), env),
                                procedure->data.compound_procedure.env);
       
       // Transform lambda body into begin form
@@ -1959,6 +2004,7 @@ void populate_global_environment(void) {
   define_macro_symbol = make_symbol("define-macro");
   test_symbol = make_symbol("test");
 
+  rest_symbol = make_symbol("&rest");
   
   /* Primitive Procedures
   **********************************/

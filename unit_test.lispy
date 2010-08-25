@@ -106,32 +106,32 @@
   (two-arg-func 35 7) 
   >>> 42
   
-;;   ;; Variable argument functions
-;;   (define (variable-args &args) &args) 
-;;   >>> void
-;;   (variable-args 1) 
-;;   >>> '(1)
-;;   (variable-args 1 2) 
-;;   >>> '(1 2)
-;;   (variable-args "hello" "world") 
-;;   >>> '("hello" "world")
-;;   
-;;   ;; Required arguments and variable arguments
-;;   (define (var-args-1 one &args) one)
-;;   >>> void
-;;   (var-args-1 42)
-;;   >>> 42
-;;   (var-args-1 42 84)
-;;   >>> 42
-;;   
-;;   (define (var-args-2 one &args) &args)
-;;   >>> void
-;;   (var-args-2 1)
-;;   >>> '()
-;;   (var-args-2 1 2)
-;;   >>> '(2)
-;;   (var-args-2 1 2 3)
-;;   >>> '(2 3)
+  ;; Variable argument functions
+  (define (variable-args &rest) &rest) 
+  >>> void
+  (variable-args 1) 
+  >>> '(1)
+  (variable-args 1 2) 
+  >>> '(1 2)
+  (variable-args "hello" "world") 
+  >>> '("hello" "world")
+  
+  ;; Required arguments and variable arguments
+  (define (var-args-1 one &rest) one)
+  >>> void
+  (var-args-1 42)
+  >>> 42
+  (var-args-1 42 84)
+  >>> 42
+  
+  (define (var-args-2 one &rest) &rest)
+  >>> void
+  (var-args-2 1)
+  >>> '()
+  (var-args-2 1 2)
+  >>> '(2)
+  (var-args-2 1 2 3)
+  >>> '(2 3)
   
   ;; Internal Definitions
   (define x 5) 
