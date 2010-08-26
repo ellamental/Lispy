@@ -657,26 +657,9 @@ object *read_pair(FILE *in) {
   car_obj = read(in);
   
   remove_whitespace(in);
-/*  
-  c = getc(in);
-  if (c == '.') {  // read improper list
-    c = peek(in);
-    if (!is_delimiter(c)) {
-      error("dot not followed by delimiter");
-    }
-    cdr_obj = read(in);
-    remove_whitespace(in);
-    c = getc(in);
-    if (c != ')') {
-      error("Missing trailing right paren");
-    }
-    return cons(car_obj, cdr_obj);
-  }
-*/
-//  else {  // read list
-//    ungetc(c, in);
-    cdr_obj = read_pair(in);
-    return cons(car_obj, cdr_obj);
+
+  cdr_obj = read_pair(in);
+  return cons(car_obj, cdr_obj);
 }
 
 
@@ -703,16 +686,12 @@ object *read(FILE *in) {
     c = getc(in);
 
     switch (c) {
-      case 't':                  // Transform #t to True
-        return True;
-      case 'f':                  // Transform #f to False
-        return False;
       case '\\':
         return read_character(in);
-      /*case '\n':
-        error("Newline not allowed immediately following #\\") */
+      case '(':
+        error("Vector syntax not implemented yet");
       default:
-        error("Unrecognized boolean or character literal");
+        error("Unrecognized syntax");
     }
   }
 
