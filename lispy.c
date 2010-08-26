@@ -657,9 +657,9 @@ object *read_pair(FILE *in) {
   car_obj = read(in);
   
   remove_whitespace(in);
-  
+/*  
   c = getc(in);
-  if (c == '.') {  /* read improper list */
+  if (c == '.') {  // read improper list
     c = peek(in);
     if (!is_delimiter(c)) {
       error("dot not followed by delimiter");
@@ -672,11 +672,11 @@ object *read_pair(FILE *in) {
     }
     return cons(car_obj, cdr_obj);
   }
-  else {  /* read list */
-    ungetc(c, in);
+*/
+//  else {  // read list
+//    ungetc(c, in);
     cdr_obj = read_pair(in);
     return cons(car_obj, cdr_obj);
-  }
 }
 
 
@@ -1543,8 +1543,32 @@ object *p_not(object *exp) {
 
 //  +
 
+object *h_numeric_add(object *obj_1, object *obj_2) {
+  switch (obj_1->type) {
+    case FLONUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.flonum.value + obj_2->data.flonum.value);
+        case FIXNUM:
+          return make_flonum(obj_1->data.flonum.value + obj_2->data.fixnum.value);
+      }
+    case FIXNUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.fixnum.value + obj_2->data.flonum.value);
+        case FIXNUM:
+          return make_fixnum(obj_1->data.fixnum.value + obj_2->data.fixnum.value);
+      }
+  }
+}          
+  
 object *h_add(object *obj_1, object *obj_2) {
   char cbuffer[3];
+  
+  if ((obj_1->type == FIXNUM || obj_1->type == FLONUM) &&
+      (obj_2->type == FIXNUM || obj_2->type == FLONUM)) {
+    return h_numeric_add(obj_1, obj_2);
+  }
   
   if (obj_1->type != obj_2->type) {
     error("Types must match");
