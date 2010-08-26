@@ -9,6 +9,7 @@
 ** TODO:
 ** Add support for FLONUMs to numeric procedures
 ** Refactor eval_arguments (support for variadic procedures)
+** Add other types of meta-data and a convinent way of representing them.
 ******************************************************************************/
 
 /*
@@ -43,9 +44,10 @@ void REPL(void);
 **                                  Types
 ******************************************************************************/
 
-typedef enum {THE_EMPTY_LIST, BOOLEAN, VOID, CHARACTER, SYMBOL,
+typedef enum {BOOLEAN, VOID, CHARACTER, SYMBOL,
               PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO,
               FIXNUM, FLONUM,
+              THE_EMPTY_LIST,
               STRING, PAIR} object_type;
 
 typedef struct object {
@@ -93,6 +95,7 @@ typedef struct object {
 **************************************/
 
 object *the_empty_list;
+
 object *False;
 object *True;
 object *Void;
@@ -104,13 +107,15 @@ object *define_symbol;
 object *set_symbol;
 object *if_symbol;
 object *cond_symbol;
-object *else_symbol;
 object *lambda_symbol;
-object *rest_symbol;
 object *begin_symbol;
 object *let_symbol;
+
 object *define_macro_symbol;
 object *test_symbol;
+
+object *else_symbol;
+object *rest_symbol;
 
 object *the_global_environment;
 
@@ -1344,6 +1349,7 @@ object *p_print(object *arguments) {
   return Void;
 }
 
+
 //  load
 
 object *p_load(object *arguments) {
@@ -1374,6 +1380,7 @@ object *p_list(object *arguments) {
   return arguments;
 }
 
+
 //  null?
 
 object *p_nullp(object *arguments) {
@@ -1381,6 +1388,7 @@ object *p_nullp(object *arguments) {
     return True;}
   else {return False;}
 }
+
 
 //  cons
 
@@ -1660,6 +1668,7 @@ object *p_greater_than(object *arguments) {
   return h_greater_than(car(arguments), cadr(arguments));
 }
 
+
 //  <
 
 object *h_less_than(object *obj_1, object *obj_2) {
@@ -1786,6 +1795,7 @@ object *p_type(object *arguments) {
   h_type(car(arguments));
 }
 
+
 //  type?
 
 object *p_typep(object *arguments) {
@@ -1832,6 +1842,7 @@ object *h_to_string(object *obj) {
 object *p_to_string(object *arguments) {
   return h_to_string(car(arguments));
 }
+
 
 //  ->number
 
@@ -1905,6 +1916,7 @@ object *p_first(object *arguments) {
   return h_first(car(arguments));
 }
 
+
 //  rest
 
 object *h_rest(object *seq) {
@@ -1920,6 +1932,28 @@ object *h_rest(object *seq) {
 
 object *p_rest(object *arguments) {
   return h_rest(car(arguments));
+}
+
+
+//  empty?
+
+object *h_emptyp(object *obj) {
+  switch (obj->type) {
+    case THE_EMPTY_LIST:
+      return True;
+      break;
+
+    case STRING:
+      if (!strcmp(obj->data.string.value, "")) {  // strcmp returns 0 if equal
+        return True;
+      }
+      break;
+  }
+  return False;
+}
+
+object *p_emptyp(object *arguments) {
+  return h_emptyp(car(arguments));
 }
 
 
@@ -1941,17 +1975,27 @@ object *h_length(object *obj) {
   else if (obj->type == STRING) {
     return make_fixnum(strlen(obj->data.string.value));
   }
+  else {
+    error("Unsupported type for length");
+  }
 }
 
 object *p_length(object *arguments) {
   h_length(car(arguments));
 }
 
+
+
+/*  Meta-data Procedures
+************************************************/
+
 //  doc
 
 object *p_doc(object *arguments) {
   return car(arguments)->data.compound_procedure.docstring;
 }
+
+
 
 /** ***************************************************************************
 **                                   REPL
@@ -1961,7 +2005,7 @@ object *p_doc(object *arguments) {
 void init(void) {
   the_empty_list = alloc_object();
   the_empty_list->type = THE_EMPTY_LIST;
-
+  
   the_global_environment = extend_environment(the_empty_list,
                                               the_empty_list,
                                               the_empty_list);
@@ -1997,14 +2041,15 @@ void populate_global_environment(void) {
   define_symbol = make_symbol("define");
   if_symbol = make_symbol("if");
   cond_symbol = make_symbol("cond");
-  else_symbol = make_symbol("else");
   lambda_symbol = make_symbol("lambda");
   begin_symbol = make_symbol("begin");
   let_symbol = make_symbol("let");
+
+  else_symbol = make_symbol("else");
+  rest_symbol = make_symbol("&rest");
+
   define_macro_symbol = make_symbol("define-macro");
   test_symbol = make_symbol("test");
-
-  rest_symbol = make_symbol("&rest");
   
   /* Primitive Procedures
   **********************************/
@@ -2025,18 +2070,20 @@ void populate_global_environment(void) {
 
   
   // Equality Procedures
-  add_procedure("is?",   p_isp);
-  add_procedure("=", p_equalp);
+  add_procedure("is?",    p_isp);
+  add_procedure("=",      p_equalp);
   add_procedure("equal?", p_equalp);
   add_procedure("not",    p_not);
   
   
   // Numeric Procedures
-  add_procedure("+", p_add);
   add_procedure("-", p_sub);
   add_procedure("*", p_mul);
   add_procedure("/", p_div);
 
+
+  // Polymorphic Procedures
+  add_procedure("+", p_add);
   add_procedure(">", p_greater_than);
   add_procedure("<", p_less_than);
   add_procedure(">=", p_greater_than_or_eq);
@@ -2044,18 +2091,22 @@ void populate_global_environment(void) {
 
   
   // Type Procedures
-  add_procedure("type",           p_type);
-  add_procedure("type?",          p_typep);
+  add_procedure("type",     p_type);
+  add_procedure("type?",    p_typep);
   
   add_procedure("->string", p_to_string);
   add_procedure("->number", p_to_number);
   add_procedure("->char",   p_to_char);
+ 
   
   // Sequence Procedures
-  add_procedure("first", p_first);
-  add_procedure("rest",  p_rest);
+  add_procedure("first",  p_first);
+  add_procedure("rest",   p_rest);
+  add_procedure("empty?", p_emptyp);
   add_procedure("length", p_length);
 
+  
+  // Meta-data Procedures
   add_procedure("doc", p_doc);
 }
 

@@ -1,9 +1,9 @@
 ;;___________________________________________________________________________;;
-;;  Lispy Unit Tests
+;;  Lispy Unit Test
 ;;  unit_test.lispy
 ;;  
 ;;  TODO:
-;;  Add tests for FLONUMs to numeric procedures, type, etc...
+;;  Add test for FLONUMs to numeric procedures, type, etc...
 ;;___________________________________________________________________________;;
 
 
@@ -587,7 +587,7 @@
 )
 
 
-;;  Polymorphic Procedures
+;;  Sequence Procedures
 ;;_______________________________________________________;;
 
 ;;  first
@@ -616,8 +616,39 @@
   >>> "ello"
   (rest (rest "hello"))
   >>> "llo"
-  
 )
+
+;;  empty?
+;;_________________________;;
+
+(test
+  (empty? '(1 2 3))
+  >>> False
+  (empty? '())
+  >>> True
+  (empty? "hello")
+  >>> False
+  (empty? "")
+  >>> True
+)
+
+;;  length
+;;_________________________;;
+
+(test
+  (length '(1 2 3))
+  >>> 3
+  (length '())
+  >>> 0
+  (length "hello")
+  >>> 5
+  (length "")
+  >>> 0
+)
+
+
+;;  Polymorphic Procedures
+;;_______________________________________________________;;
 
 
 ;;  +
@@ -703,6 +734,8 @@
 
 
 
+
+
 ;;  doc
 ;;_________________________;;
 
@@ -726,4 +759,4 @@
 ;;  
 ;;_________________________;;
 
-(print "Unit Tests Completed Successfully\n")
+(print "Unit Test Completed Successfully\n")
