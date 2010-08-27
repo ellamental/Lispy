@@ -7,7 +7,6 @@
 ** http://michaux.ca/articles/scheme-from-scratch-introduction
 ** 
 ** TODO:
-** Add support for FLONUMs to numeric procedures
 ** Refactor eval_arguments (support for variadic procedures)
 ** Add other types of meta-data and a convinent way of representing them.
 ******************************************************************************/
@@ -34,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 // Report Error and Terminate
 void REPL(void);
@@ -44,11 +44,21 @@ void REPL(void);
 **                                  Types
 ******************************************************************************/
 
-typedef enum {BOOLEAN, VOID, CHARACTER, SYMBOL,
-              PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO,
-              FIXNUM, FLONUM,
-              THE_EMPTY_LIST,
-              STRING, PAIR} object_type;
+typedef enum {
+  // Self-Evaluating Types
+  BOOLEAN, VOID, CHARACTER, SYMBOL, THE_EMPTY_LIST,
+
+  // Procedures and Macros
+  PRIMITIVE_PROCEDURE=10, COMPOUND_PROCEDURE, MACRO,
+
+  // Numeric Tower
+  FIXNUM=20, FLONUM,
+
+  // Sequences
+  STRING=30, PAIR
+
+} object_type;
+
 
 typedef struct object {
   object_type type;
@@ -1515,23 +1525,19 @@ object *h_numeric_add(object *obj_1, object *obj_2) {
     case FLONUM:
       switch (obj_2->type) {
         case FLONUM:
-          return make_flonum(obj_1->data.flonum + 
-                             obj_2->data.flonum);
+          return make_flonum(obj_1->data.flonum + obj_2->data.flonum);
         case FIXNUM:
-          return make_flonum(obj_1->data.flonum + 
-                             obj_2->data.fixnum);
+          return make_flonum(obj_1->data.flonum + obj_2->data.fixnum);
       }
     case FIXNUM:
       switch (obj_2->type) {
         case FLONUM:
-          return make_flonum(obj_1->data.fixnum + 
-                             obj_2->data.flonum);
+          return make_flonum(obj_1->data.fixnum + obj_2->data.flonum);
         case FIXNUM:
-          return make_fixnum(obj_1->data.fixnum + 
-                             obj_2->data.fixnum);
+          return make_fixnum(obj_1->data.fixnum + obj_2->data.fixnum);
       }
   }
-}          
+}
   
 object *h_add(object *obj_1, object *obj_2) {
   char cbuffer[3];
@@ -1552,7 +1558,7 @@ object *h_add(object *obj_1, object *obj_2) {
     strcpy(sbuffer, obj_1->data.string);
     strcat(sbuffer, obj_2->data.string);
     return make_string(sbuffer);
-  }    
+  }
   
   switch (obj_1->type) {
     case CHARACTER:
@@ -1565,47 +1571,112 @@ object *h_add(object *obj_1, object *obj_2) {
 }
 
 object *p_add(object *arguments) {
-  h_add(car(arguments), cadr(arguments));
+  object *result = h_add(car(arguments), cadr(arguments));
+  arguments = cddr(arguments);
+  while (arguments != the_empty_list) {
+    result = h_add(result, car(arguments));
+    arguments = cdr(arguments);
+  }
+  return result;
 }
 
 
 //  -
 
+object *h_sub(object *obj_1, object *obj_2) {
+  switch (obj_1->type) {
+    case FLONUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.flonum - obj_2->data.flonum);
+        case FIXNUM:
+          return make_flonum(obj_1->data.flonum - obj_2->data.fixnum);
+      }
+    case FIXNUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.fixnum - obj_2->data.flonum);
+        case FIXNUM:
+          return make_fixnum(obj_1->data.fixnum - obj_2->data.fixnum);
+      }
+  }
+}
+
 object *p_sub(object *arguments) {
-  long result = (car(arguments))->data.fixnum;
-  arguments = cdr(arguments);
-  while (!is_the_empty_list(arguments)) {
-    result -= (car(arguments))->data.fixnum;
+  object *result = h_sub(car(arguments), cadr(arguments));
+  arguments = cddr(arguments);
+  while (arguments != the_empty_list) {
+    result = h_sub(result, car(arguments));
     arguments = cdr(arguments);
   }
-  return make_fixnum(result);
+  return result;
 }
 
 
 //  *
 
-object *p_mul(object *arguments) {
-  long result = 1;
+object *h_mul(object *obj_1, object *obj_2) {
+  switch (obj_1->type) {
+    case FLONUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.flonum * obj_2->data.flonum);
+        case FIXNUM:
+          return make_flonum(obj_1->data.flonum * obj_2->data.fixnum);
+      }
+    case FIXNUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.fixnum * obj_2->data.flonum);
+        case FIXNUM:
+          return make_fixnum(obj_1->data.fixnum * obj_2->data.fixnum);
+      }
+  }
+}
 
-  while (!is_the_empty_list(arguments)) {
-    result *= (car(arguments))->data.fixnum;
+object *p_mul(object *arguments) {
+  object *result = h_mul(car(arguments), cadr(arguments));
+  arguments = cddr(arguments);
+  while (arguments != the_empty_list) {
+    result = h_mul(result, car(arguments));
     arguments = cdr(arguments);
   }
-  return make_fixnum(result);
+  return result;
 }
 
 
 //  /
 
+
+object *h_div(object *obj_1, object *obj_2) {
+  switch (obj_1->type) {
+    case FLONUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.flonum / obj_2->data.flonum);
+        case FIXNUM:
+          return make_flonum(obj_1->data.flonum / obj_2->data.fixnum);
+      }
+    case FIXNUM:
+      switch (obj_2->type) {
+        case FLONUM:
+          return make_flonum(obj_1->data.fixnum / obj_2->data.flonum);
+        case FIXNUM:
+          return (obj_1->data.fixnum % obj_2->data.fixnum) ?
+            make_flonum(obj_1->data.fixnum / (double) obj_2->data.fixnum) :
+            make_fixnum(obj_1->data.fixnum / obj_2->data.fixnum);
+      }
+  }
+}
+
 object *p_div(object *arguments) {
-  long result = (car(arguments))->data.fixnum;
-  arguments = cdr(arguments);
-  
-  while (!is_the_empty_list(arguments)) {
-    result /= (car(arguments))->data.fixnum;
+  object *result = h_div(car(arguments), cadr(arguments));
+  arguments = cddr(arguments);
+  while (arguments != the_empty_list) {
+    result = h_div(result, car(arguments));
     arguments = cdr(arguments);
   }
-  return make_fixnum(result);
+  return result;
 }
 
 
