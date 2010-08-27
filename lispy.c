@@ -53,28 +53,16 @@ typedef enum {BOOLEAN, VOID, CHARACTER, SYMBOL,
 typedef struct object {
   object_type type;
   union {
-    struct {                                  // FIXNUM
-      long value;
-    } fixnum;
-    struct {                                  // FLONUM
-      double value;
-    } flonum;
-    struct {                                  // BOOLEAN
-      char value;
-    } boolean;
-    struct {                                  // CHARACTER
-      char value;
-    } character;
-    struct {                                  // STRING
-      char *value;
-    } string;
+    long int fixnum;
+    double   flonum;
+    char     boolean;
+    char     character;
+    char     *string;
+    char     *symbol;
     struct {                                  // PAIR
       struct object *car;
       struct object *cdr;
     } pair;
-    struct {                                  // SYMBOL
-      char *value;
-    } symbol;
     struct {                                  // PRIMITIVE_PROCEDURE
       struct object *(*fn) (struct object *arguments);
     } primitive_procedure;
@@ -176,7 +164,7 @@ object *make_fixnum(long value) {
 
   obj = alloc_object();
   obj->type = FIXNUM;
-  obj->data.fixnum.value = value;
+  obj->data.fixnum = value;
   return obj;
 }
 
@@ -193,7 +181,7 @@ object *make_flonum(double value) {
 
   obj = alloc_object();
   obj->type = FLONUM;
-  obj->data.flonum.value = value;
+  obj->data.flonum = value;
   return obj;
 }
 
@@ -210,7 +198,7 @@ object *make_character(char value) {
   
   obj = alloc_object();
   obj->type = CHARACTER;
-  obj->data.character.value = value;
+  obj->data.character = value;
   return obj;
 }
 
@@ -227,11 +215,11 @@ object *make_string(char *value) {
   
   obj = alloc_object();
   obj->type = STRING;
-  obj->data.string.value = malloc(strlen(value) + 1);
-  if (obj->data.string.value == NULL) {
+  obj->data.string = malloc(strlen(value) + 1);
+  if (obj->data.string == NULL) {
     error("out of memory\n");
   }
-  strcpy(obj->data.string.value, value);
+  strcpy(obj->data.string, value);
   return obj;
 }
 
@@ -250,7 +238,7 @@ object *make_symbol(char *value) {
   // search for the symbol in symbol_table
   element = symbol_table;
   while (!is_the_empty_list(element)) {
-    if (strcmp(car(element)->data.symbol.value, value) == 0) {
+    if (strcmp(car(element)->data.symbol, value) == 0) {
       return car(element);
     }
     element = cdr(element);
@@ -259,11 +247,11 @@ object *make_symbol(char *value) {
   // create a symbol and add it to symbol_table
   obj = alloc_object();
   obj->type = SYMBOL;
-  obj->data.symbol.value = malloc(strlen(value) + 1);
-  if (obj->data.symbol.value == NULL) {
+  obj->data.symbol = malloc(strlen(value) + 1);
+  if (obj->data.symbol == NULL) {
     error("out of memory\n");
   }
-  strcpy(obj->data.symbol.value, value);
+  strcpy(obj->data.symbol, value);
   symbol_table = cons(obj, symbol_table);
   return obj;
 }
@@ -454,7 +442,7 @@ object *lookup_variable_value(object *var, object *env) {
     }
     env = enclosing_environment(env);
   }
-  error("Unbound Variable: %s", var->data.symbol.value);
+  error("Unbound Variable: %s", var->data.symbol);
 }
 
 void set_variable_value(object *var, object *val, object *env) {
@@ -476,7 +464,7 @@ void set_variable_value(object *var, object *val, object *env) {
     }
     env = enclosing_environment(env);
   }
-  error("Can not set unbound variable: %s\n", var->data.symbol.value);
+  error("Can not set unbound variable: %s\n", var->data.symbol);
 }
 
 void define_variable(object *var, object *val, object *env) {
@@ -1144,7 +1132,7 @@ tailcall:
     /**  Compound  **/
     else if (is_compound_procedure(procedure)) {
       // Check argument length (< = error) (> = extra arguments are not used)
-      //if (h_length(cdr(exp))->data.fixnum.value < h_length(procedure->data.compound_procedure.parameters)->data.fixnum.value) {
+      //if (h_length(cdr(exp))->data.fixnum < h_length(procedure->data.compound_procedure.parameters)->data.fixnum) {
       //  error("Not enough arguments");}
       
       env = extend_environment(procedure->data.compound_procedure.parameters,
@@ -1210,11 +1198,11 @@ void write(object *obj) {
   
   switch (obj->type) {
     case FIXNUM:                                      // FIXNUM
-      printf("%ld", obj->data.fixnum.value);
+      printf("%ld", obj->data.fixnum);
       break;
     
     case FLONUM:                                      // FLONUM
-      printf("%f", obj->data.flonum.value);
+      printf("%f", obj->data.flonum);
       break;
     
     case BOOLEAN:                                     // BOOLEAN
@@ -1222,7 +1210,7 @@ void write(object *obj) {
       break;
       
     case CHARACTER:                                   // CHARACTER
-      c = obj->data.character.value;
+      c = obj->data.character;
       printf("#\\");
       switch (c) {
         case '\n':
@@ -1237,7 +1225,7 @@ void write(object *obj) {
       break;
       
     case STRING:                                      // STRING
-      str = obj->data.string.value;
+      str = obj->data.string;
       putchar('"');
       while (*str != '\0') {
         switch (*str) {
@@ -1263,7 +1251,7 @@ void write(object *obj) {
       break;
       
     case SYMBOL:                                      // SYMBOL
-      printf("%s", obj->data.symbol.value);
+      printf("%s", obj->data.symbol);
       break;
       
     case PAIR:                                        // PAIR
@@ -1315,10 +1303,10 @@ object *p_print(object *arguments) {
     obj = car(arguments);
     switch (obj->type) {
       case STRING:
-        printf("%s", obj->data.string.value);
+        printf("%s", obj->data.string);
         break;
       case CHARACTER:
-        printf("%c", obj->data.character.value);
+        printf("%c", obj->data.character);
         break;
       default:
         write(obj);
@@ -1337,7 +1325,7 @@ object *p_load(object *arguments) {
   object *exp;
   object *result;
   
-  filename = car(arguments)->data.string.value;
+  filename = car(arguments)->data.string;
   in = fopen(filename, "r");
   if (in == NULL) {
     error("could not load file \"%s\"", filename);
@@ -1400,26 +1388,26 @@ object *p_isp(object *arguments) {
       break;
     
     case FIXNUM:
-      return (obj_1->data.fixnum.value == 
-              obj_2->data.fixnum.value) ? 
+      return (obj_1->data.fixnum == 
+              obj_2->data.fixnum) ? 
               True : False;
       break;
     
     case FLONUM:
-      return (obj_1->data.flonum.value ==
-              obj_2->data.flonum.value) ?
+      return (obj_1->data.flonum ==
+              obj_2->data.flonum) ?
               True : False;
       break;
       
     case CHARACTER:
-      return (obj_1->data.character.value ==
-              obj_2->data.character.value) ?
+      return (obj_1->data.character ==
+              obj_2->data.character) ?
               True : False;
       break;
     
     case SYMBOL:
-      return (obj_1->data.symbol.value ==
-              obj_2->data.symbol.value) ?
+      return (obj_1->data.symbol ==
+              obj_2->data.symbol) ?
               True : False;
       break;
     
@@ -1452,26 +1440,26 @@ object *h_equalp(object *obj_1, object *obj_2) {
       break;
     
     case FIXNUM:
-      return (obj_1->data.fixnum.value == 
-              obj_2->data.fixnum.value) ? 
+      return (obj_1->data.fixnum == 
+              obj_2->data.fixnum) ? 
               True : False;
       break;
     
     case FLONUM:
-      return (obj_1->data.flonum.value ==
-              obj_2->data.flonum.value) ?
+      return (obj_1->data.flonum ==
+              obj_2->data.flonum) ?
               True : False;
       break;
       
     case CHARACTER:
-      return (obj_1->data.character.value ==
-              obj_2->data.character.value) ?
+      return (obj_1->data.character ==
+              obj_2->data.character) ?
               True : False;
       break;
     
     case SYMBOL:
-      return (obj_1->data.symbol.value ==
-              obj_2->data.symbol.value) ?
+      return (obj_1->data.symbol ==
+              obj_2->data.symbol) ?
               True : False;
       break;
     
@@ -1481,13 +1469,13 @@ object *h_equalp(object *obj_1, object *obj_2) {
       return (obj_1 == obj_2) ? True : False;
     
     case STRING:
-      return !strcmp(obj_1->data.string.value, obj_2->data.string.value) ? 
+      return !strcmp(obj_1->data.string, obj_2->data.string) ? 
              True : False;
       break;
     
     case PAIR:
-      if (h_length(obj_1)->data.fixnum.value != 
-          h_length(obj_2)->data.fixnum.value) {
+      if (h_length(obj_1)->data.fixnum != 
+          h_length(obj_2)->data.fixnum) {
         return False;}
       while (obj_1 != the_empty_list) {
         if (h_equalp(car(obj_1), car(obj_2)) == True) {
@@ -1527,16 +1515,20 @@ object *h_numeric_add(object *obj_1, object *obj_2) {
     case FLONUM:
       switch (obj_2->type) {
         case FLONUM:
-          return make_flonum(obj_1->data.flonum.value + obj_2->data.flonum.value);
+          return make_flonum(obj_1->data.flonum + 
+                             obj_2->data.flonum);
         case FIXNUM:
-          return make_flonum(obj_1->data.flonum.value + obj_2->data.fixnum.value);
+          return make_flonum(obj_1->data.flonum + 
+                             obj_2->data.fixnum);
       }
     case FIXNUM:
       switch (obj_2->type) {
         case FLONUM:
-          return make_flonum(obj_1->data.fixnum.value + obj_2->data.flonum.value);
+          return make_flonum(obj_1->data.fixnum + 
+                             obj_2->data.flonum);
         case FIXNUM:
-          return make_fixnum(obj_1->data.fixnum.value + obj_2->data.fixnum.value);
+          return make_fixnum(obj_1->data.fixnum + 
+                             obj_2->data.fixnum);
       }
   }
 }          
@@ -1554,24 +1546,18 @@ object *h_add(object *obj_1, object *obj_2) {
   }
   
   if (obj_1->type == STRING) {
-    int l1 = strlen(obj_1->data.string.value);
-    int l2 = strlen(obj_2->data.string.value);
+    int l1 = strlen(obj_1->data.string);
+    int l2 = strlen(obj_2->data.string);
     char sbuffer[l1+l2];
-    strcpy(sbuffer, obj_1->data.string.value);
-    strcat(sbuffer, obj_2->data.string.value);
+    strcpy(sbuffer, obj_1->data.string);
+    strcat(sbuffer, obj_2->data.string);
     return make_string(sbuffer);
   }    
   
   switch (obj_1->type) {
-    case FIXNUM:
-      return make_fixnum(obj_1->data.fixnum.value + obj_2->data.fixnum.value);
-      break;
-    case FLONUM:
-      return make_flonum(obj_1->data.flonum.value + obj_2->data.flonum.value);
-      break;
     case CHARACTER:
-      cbuffer[0] = obj_1->data.character.value;
-      cbuffer[1] = obj_2->data.character.value;
+      cbuffer[0] = obj_1->data.character;
+      cbuffer[1] = obj_2->data.character;
       cbuffer[2] = '\0';
       return make_string(cbuffer);
 
@@ -1586,10 +1572,10 @@ object *p_add(object *arguments) {
 //  -
 
 object *p_sub(object *arguments) {
-  long result = (car(arguments))->data.fixnum.value;
+  long result = (car(arguments))->data.fixnum;
   arguments = cdr(arguments);
   while (!is_the_empty_list(arguments)) {
-    result -= (car(arguments))->data.fixnum.value;
+    result -= (car(arguments))->data.fixnum;
     arguments = cdr(arguments);
   }
   return make_fixnum(result);
@@ -1602,7 +1588,7 @@ object *p_mul(object *arguments) {
   long result = 1;
 
   while (!is_the_empty_list(arguments)) {
-    result *= (car(arguments))->data.fixnum.value;
+    result *= (car(arguments))->data.fixnum;
     arguments = cdr(arguments);
   }
   return make_fixnum(result);
@@ -1612,11 +1598,11 @@ object *p_mul(object *arguments) {
 //  /
 
 object *p_div(object *arguments) {
-  long result = (car(arguments))->data.fixnum.value;
+  long result = (car(arguments))->data.fixnum;
   arguments = cdr(arguments);
   
   while (!is_the_empty_list(arguments)) {
-    result /= (car(arguments))->data.fixnum.value;
+    result /= (car(arguments))->data.fixnum;
     arguments = cdr(arguments);
   }
   return make_fixnum(result);
@@ -1637,29 +1623,29 @@ object *h_greater_than(object *obj_1, object *obj_2) {
   }
 
   else if (obj_1->type == FIXNUM) {
-    return (obj_1->data.fixnum.value > obj_2->data.fixnum.value) ?
+    return (obj_1->data.fixnum > obj_2->data.fixnum) ?
             True : False;
   }
 
   else if (obj_1->type == FLONUM) {
-    return (obj_1->data.flonum.value > obj_2->data.flonum.value) ?
+    return (obj_1->data.flonum > obj_2->data.flonum) ?
             True : False;
   }
 
   else if (obj_1->type == CHARACTER) {
-    return (obj_1->data.character.value > obj_2->data.character.value) ?
+    return (obj_1->data.character > obj_2->data.character) ?
             True : False;
   }
   
   else if (obj_1->type == STRING) {
-    return (strcmp(obj_1->data.string.value, 
-                   obj_2->data.string.value) == 1) ?
+    return (strcmp(obj_1->data.string, 
+                   obj_2->data.string) == 1) ?
             True : False;
   }
 
   else if (obj_1->type == SYMBOL) {
-    return (strcmp(obj_1->data.symbol.value, 
-                   obj_2->data.symbol.value) == 1) ?
+    return (strcmp(obj_1->data.symbol, 
+                   obj_2->data.symbol) == 1) ?
             True : False;
   }
 /*  else if (obj_1->type == PAIR) {
@@ -1686,29 +1672,29 @@ object *h_less_than(object *obj_1, object *obj_2) {
   }
 
   else if (obj_1->type == FIXNUM) {
-    return (obj_1->data.fixnum.value < obj_2->data.fixnum.value) ?
+    return (obj_1->data.fixnum < obj_2->data.fixnum) ?
             True : False;
   }
 
   else if (obj_1->type == FLONUM) {
-    return (obj_1->data.flonum.value < obj_2->data.flonum.value) ?
+    return (obj_1->data.flonum < obj_2->data.flonum) ?
             True : False;
   }
 
   else if (obj_1->type == CHARACTER) {
-    return (obj_1->data.character.value < obj_2->data.character.value) ?
+    return (obj_1->data.character < obj_2->data.character) ?
             True : False;
   }
   
   else if (obj_1->type == STRING) {
-    return (strcmp(obj_1->data.string.value, 
-                   obj_2->data.string.value) == -1) ?
+    return (strcmp(obj_1->data.string, 
+                   obj_2->data.string) == -1) ?
             True : False;
   }
 
   else if (obj_1->type == SYMBOL) {
-    return (strcmp(obj_1->data.symbol.value, 
-                   obj_2->data.symbol.value) == -1) ?
+    return (strcmp(obj_1->data.symbol, 
+                   obj_2->data.symbol) == -1) ?
             True : False;
   }
 /*  else if (obj_1->type == PAIR) {
@@ -1815,24 +1801,24 @@ object *h_to_string(object *obj) {
   
   switch (obj->type) {
     case FIXNUM:
-      sprintf(buf, "%ld", obj->data.fixnum.value);
+      sprintf(buf, "%ld", obj->data.fixnum);
       return make_string(buf);
       break;
     case FLONUM:
-      sprintf(buf, "%f", obj->data.flonum.value);
+      sprintf(buf, "%f", obj->data.flonum);
       return make_string(buf);
       break;
     case CHARACTER:
-      cbuf[0] = obj->data.character.value;
+      cbuf[0] = obj->data.character;
       cbuf[1] = '\0';
       return make_string(cbuf);
       break;
     case SYMBOL:
-      return make_string(obj->data.symbol.value);
+      return make_string(obj->data.symbol);
       break;
     case PAIR:  // Should return "(a b c)" for (->string '(#\a #\b #\c))
       while (obj != the_empty_list) {
-        buf[count] = car(obj)->data.character.value;
+        buf[count] = car(obj)->data.character;
         obj = cdr(obj);
         count++;
       }
@@ -1852,18 +1838,18 @@ object *p_to_string(object *arguments) {
 object *h_to_number(object *obj) {
   switch (obj->type) {
     case STRING:
-      if (strchr(obj->data.string.value, '.')) {
-        return make_flonum(atof(obj->data.string.value));
+      if (strchr(obj->data.string, '.')) {
+        return make_flonum(atof(obj->data.string));
       }
-      else if (strchr(obj->data.string.value, '/')) {
+      else if (strchr(obj->data.string, '/')) {
         error("Rational numbers not implemented yet");
       }
       else {
-        return make_fixnum(atol(obj->data.string.value));
+        return make_fixnum(atol(obj->data.string));
       }
       break;
     case CHARACTER:
-      return make_fixnum(obj->data.character.value);
+      return make_fixnum(obj->data.character);
       break;
   }
 }
@@ -1881,12 +1867,12 @@ object *h_to_char(object *obj) {
   
   switch (obj->type) {
     case FIXNUM:
-      return make_character(obj->data.fixnum.value);
+      return make_character(obj->data.fixnum);
       break;
     case STRING:
-      len = strlen(obj->data.string.value) - 1;
+      len = strlen(obj->data.string) - 1;
       while (len > -1) {
-        char_list = cons(make_character(obj->data.string.value[len]), char_list);
+        char_list = cons(make_character(obj->data.string[len]), char_list);
         len--;
       }
       return char_list;
@@ -1910,7 +1896,7 @@ object *h_first(object *seq) {
       return car(seq);
       break;
     case STRING:
-      return make_character(seq->data.string.value[0]);
+      return make_character(seq->data.string[0]);
       break;
   }
 }
@@ -1928,7 +1914,7 @@ object *h_rest(object *seq) {
       return cdr(seq);
       break;
     case STRING:
-      return make_string(&seq->data.string.value[1]);
+      return make_string(&seq->data.string[1]);
       break;
   }
 }
@@ -1947,7 +1933,7 @@ object *h_emptyp(object *obj) {
       break;
 
     case STRING:
-      if (!strcmp(obj->data.string.value, "")) {  // strcmp returns 0 if equal
+      if (!strcmp(obj->data.string, "")) {  // strcmp returns 0 if equal
         return True;
       }
       break;
@@ -1976,7 +1962,7 @@ object *h_length(object *obj) {
     return make_fixnum(count);
   }
   else if (obj->type == STRING) {
-    return make_fixnum(strlen(obj->data.string.value));
+    return make_fixnum(strlen(obj->data.string));
   }
   else {
     error("Unsupported type for length");
@@ -2015,11 +2001,11 @@ void init(void) {
 
   False = alloc_object();
   False->type = BOOLEAN;
-  False->data.boolean.value = 0;
+  False->data.boolean = 0;
   
   True = alloc_object();
   True->type = BOOLEAN;
-  True->data.boolean.value = 1;
+  True->data.boolean = 1;
   
   Void = alloc_object();
   Void->type = VOID;
@@ -2039,20 +2025,21 @@ void populate_global_environment(void) {
   
   /* Primitive Forms
   **********************************/
-  quote_symbol = make_symbol("quote");
-  set_symbol = make_symbol("set!");
-  define_symbol = make_symbol("define");
-  if_symbol = make_symbol("if");
-  cond_symbol = make_symbol("cond");
-  lambda_symbol = make_symbol("lambda");
-  begin_symbol = make_symbol("begin");
-  let_symbol = make_symbol("let");
+  quote_symbol        = make_symbol("quote");
+  set_symbol          = make_symbol("set!");
+  define_symbol       = make_symbol("define");
+  if_symbol           = make_symbol("if");
+  cond_symbol         = make_symbol("cond");
+  lambda_symbol       = make_symbol("lambda");
+  begin_symbol        = make_symbol("begin");
+  let_symbol          = make_symbol("let");
 
-  else_symbol = make_symbol("else");
-  rest_symbol = make_symbol("&rest");
+  else_symbol         = make_symbol("else");
+  rest_symbol         = make_symbol("&rest");
 
   define_macro_symbol = make_symbol("define-macro");
-  test_symbol = make_symbol("test");
+  test_symbol         = make_symbol("test");
+  
   
   /* Primitive Procedures
   **********************************/
@@ -2086,9 +2073,9 @@ void populate_global_environment(void) {
 
 
   // Polymorphic Procedures
-  add_procedure("+", p_add);
-  add_procedure(">", p_greater_than);
-  add_procedure("<", p_less_than);
+  add_procedure("+",  p_add);
+  add_procedure(">",  p_greater_than);
+  add_procedure("<",  p_less_than);
   add_procedure(">=", p_greater_than_or_eq);
   add_procedure("<=", p_less_than_or_eq);
 
@@ -2153,9 +2140,3 @@ int main(void) {
   return 0;
 }
 
-/*
-Jeff
-13860 W linfield dr
-53151
-262-786-0257
-*/
