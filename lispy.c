@@ -49,13 +49,13 @@ typedef enum {
   BOOLEAN, VOID, CHARACTER, SYMBOL, THE_EMPTY_LIST,
 
   // Procedures and Macros
-  PRIMITIVE_PROCEDURE=10, COMPOUND_PROCEDURE, MACRO,
+  PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO,
 
   // Numeric Tower
-  FIXNUM=20, FLONUM,
+  FIXNUM, FLONUM,
 
   // Sequences
-  STRING=30, PAIR
+  STRING, PAIR
 
 } object_type;
 
@@ -2055,6 +2055,14 @@ object *p_doc(object *arguments) {
   return car(arguments)->data.compound_procedure.docstring;
 }
 
+//  System Procedures
+//_____________________________________________//
+
+//  time
+
+object *p_time(object *arguments) {
+  return make_fixnum(time(NULL));
+}
 
 
 /** ***************************************************************************
@@ -2169,6 +2177,10 @@ void populate_global_environment(void) {
   
   // Meta-data Procedures
   add_procedure("doc", p_doc);
+  
+
+  // System Procedures
+  add_procedure("time", p_time);
 }
 
 

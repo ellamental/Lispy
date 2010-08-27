@@ -739,6 +739,8 @@
 
 
 
+;;  Meta-Data Procedures
+;;_______________________________________________________;;
 
 ;;  doc
 ;;_________________________;;
@@ -753,11 +755,24 @@
 )
 
 
+;;  System Procedures
+;;_______________________________________________________;;
 
+;;  time
+;;_________________________;;
 
-
-
-
+(test
+  (define (sleep n)
+    (define start (time))
+    (define (sleep-loop)
+      (if (> (- (time) start) (- n 1))
+        (- (time) start)
+        (sleep-loop)))
+    (sleep-loop))
+  >>> void
+  (sleep 1)
+  >>> 1
+)
 
 
 ;;  
