@@ -9,6 +9,7 @@
 ** TODO:
 ** Refactor eval_arguments (support for variadic procedures)
 ** Add other types of meta-data and a convinent way of representing them.
+** Refactor eval/read to use switch statement instead of if/else
 ******************************************************************************/
 
 /*
@@ -2055,6 +2056,8 @@ object *p_doc(object *arguments) {
   return car(arguments)->data.compound_procedure.docstring;
 }
 
+
+
 //  System Procedures
 //_____________________________________________//
 
@@ -2063,6 +2066,7 @@ object *p_doc(object *arguments) {
 object *p_time(object *arguments) {
   return make_fixnum(time(NULL));
 }
+
 
 
 /** ***************************************************************************
