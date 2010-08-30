@@ -10,25 +10,8 @@
 ** Refactor eval_arguments (support for variadic procedures)
 ** Add other types of meta-data and a convinent way of representing them.
 ** Refactor eval/read to use switch statement instead of if/else
+** Add Garbage Collection (probably reference counting)
 ******************************************************************************/
-
-/*
-* Bootstrap Scheme - a quick and very dirty Scheme interpreter.
-* Copyright (C) 2010 Peter Michaux (http://peter.michaux.ca/)
-*
-* This program is free software: you can redistribute it and/or
-* modify it under the terms of the GNU Affero General Public
-* License version 3 as published by the Free Software Foundation.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU Affero General Public License version 3 for more details.
-*
-* You should have received a copy of the GNU Affero General Public
-* License version 3 along with this program. If not, see
-* <http://www.gnu.org/licenses/>.
-*/
 
 #include <stdlib.h>
 #include <stdio.h>
