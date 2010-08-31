@@ -10,6 +10,8 @@
 ** Refactor eval_arguments (support for variadic procedures)
 ** Add other types of meta-data and a convinent way of representing them.
 ** Refactor eval/read to use switch statement instead of if/else
+** Add a new 'File' type and operations on it (read, write, open, close, etc.)
+** Refactor and fix bug in 'index'
 ** Add Garbage Collection (probably reference counting)
 ******************************************************************************/
 
@@ -19,7 +21,7 @@
 #include <ctype.h>
 #include <time.h>
 
-// Report Error and Terminate
+// Report Error and restart REPL
 void REPL(void);
 #define error(args...) fprintf(stderr, args); printf("\n"); REPL()
 
@@ -1307,6 +1309,31 @@ object *p_print(object *arguments) {
     }
     arguments = cdr(arguments);
   }
+  printf("\n");
+  return Void;
+}
+
+
+//  display
+//  Same as print except doesn't append a newline at the end
+
+object *p_display(object *arguments) {
+  while (!is_the_empty_list(arguments)) {
+    object *obj;
+    
+    obj = car(arguments);
+    switch (obj->type) {
+      case STRING:
+        printf("%s", obj->data.string);
+        break;
+      case CHARACTER:
+        printf("%c", obj->data.character);
+        break;
+      default:
+        write(obj);
+    }
+    arguments = cdr(arguments);
+  }
   return Void;
 }
 
@@ -2029,6 +2056,88 @@ object *p_length(object *arguments) {
 }
 
 
+//  index
+
+object *h_index_list(object *obj) {
+  int count = 0;
+  int start = cadr(obj)->data.fixnum;         // Set start
+  int end;                                    // Set end if not supplied
+  int len = h_length(car(obj))->data.fixnum;  // Get length of list
+  int rev = 0;                                // Var for reversing subseq
+  object *lst = car(obj);                     // lst = list to index
+  object *sublist = the_empty_list;           // Accumulator list
+  
+  // Normalize negative start
+  if (start < 0) {
+    start = len + start;
+  }
+  
+  // Check for end argument
+  if (cddr(obj) != the_empty_list) {
+    end = caddr(obj)->data.fixnum;
+  }
+  // Else set end to start
+  else {
+    end = start;
+  }
+  
+  // Normalize negative end 
+  // Add one so that (index lst 0 -1) returns whole list
+  if (end < 0) {
+    end = len + end + 1;
+  } 
+
+  // Check that list indices are within range
+  if (start > len || end > len || start < 0 || end < 0) {
+    error("List index out of range");
+  }
+
+  // If start > end: swap start & end and set rev to a non-negative value
+  // BUG: (index lst -1 0) should return the full list
+  //      now it returns '(2 1) if lst = '(1 2 3)
+  if (start > end) {
+    rev = start;
+    start = end;
+    end = rev;
+  }
+
+  // Find first index
+  while (count != start) {
+    count += 1;
+    lst = cdr(lst);
+  }
+  
+  // If we're only getting one index
+  if (start == end) {
+    return car(lst);
+  }
+  
+  // If we're getting a sublist
+  else {
+    while (count != end) {
+      sublist = cons(car(lst), sublist);
+      count += 1;
+      lst = cdr(lst);
+    }
+    if (rev) {
+      return sublist;
+    }
+    else {
+      return h_reverse(sublist);
+    }
+  }
+}
+
+object *p_index(object *obj) {
+  switch (car(obj)->type) {
+    case PAIR:
+      return h_index_list(obj);
+      break;
+    case STRING:
+      error("index on strings not implemented yet");
+      break;
+  }
+}
 
 /*  Meta-data Procedures
 ************************************************/
@@ -2115,8 +2224,9 @@ void populate_global_environment(void) {
                     the_global_environment);
 
   // I/O Procedures
-  add_procedure("print", p_print);
-  add_procedure("load",  p_load);
+  add_procedure("print",   p_print);
+  add_procedure("display", p_display);
+  add_procedure("load",    p_load);
   
   
   // List Procedures
@@ -2160,6 +2270,7 @@ void populate_global_environment(void) {
   add_procedure("rest",   p_rest);
   add_procedure("empty?", p_emptyp);
   add_procedure("length", p_length);
+  add_procedure("index",  p_index);
 
   
   // Meta-data Procedures

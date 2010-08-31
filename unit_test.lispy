@@ -318,14 +318,21 @@
 ;;  I/O
 ;;_______________________________________________________;;
 
+;;  display (print without \n)
+;;_________________________;;
+
+(test
+  (display "Testing")
+  >>> void
+)
+
 ;;  print
 ;;_________________________;;
 
 (test
-  (print "Testing...\n")
+  (print "...")
   >>> void
 )
-
 
 ;;  load
 ;;_________________________;;
@@ -641,6 +648,31 @@
   >>> 0
 )
 
+;;  index
+;;_________________________;;
+
+(test
+  (define a '(1 2 3 4 5)) >>> void
+  (index a 2)
+  >>> 3
+  (index a -1)
+  >>> 5
+
+  (index a 0 5)
+  >>> '(1 2 3 4 5)
+
+  (index a 0 -1)
+  >>> '(1 2 3 4 5)
+  (index a -3 -1)
+  >>> '(3 4 5)
+  
+  (index a 3 1)
+  >>> '(3 2)
+  (index a -1 0)
+  >>> '(4 3 2 1)
+  
+)
+
 
 ;;  Polymorphic Procedures
 ;;_______________________________________________________;;
@@ -778,4 +810,4 @@
 ;;  
 ;;_________________________;;
 
-(print "Unit Test Completed Successfully\n")
+(print "Unit Test Completed Successfully")
