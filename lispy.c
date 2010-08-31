@@ -2058,20 +2058,81 @@ object *p_length(object *arguments) {
 
 //  index
 
-object *h_index_list(object *obj) {
+object *h_index_list(object *lst, int start, int end, int rev) {
   int count = 0;
-  int start = cadr(obj)->data.fixnum;         // Set start
-  int end;                                    // Set end if not supplied
-  int len = h_length(car(obj))->data.fixnum;  // Get length of list
-  int rev = 0;                                // Var for reversing subseq
-  object *lst = car(obj);                     // lst = list to index
-  object *sublist = the_empty_list;           // Accumulator list
+  object *sublist = the_empty_list;
   
-  // Normalize negative start
+  // Find first index
+  while (count != start) {
+    count += 1;
+    lst = cdr(lst);
+  }
+  
+  // If we're only getting one index
+  if (start == end) {
+    return car(lst);
+  }
+  
+  // If we're getting a sublist
+  else {
+    while (count != end) {
+      sublist = cons(car(lst), sublist);
+      count += 1;
+      lst = cdr(lst);
+    }
+    if (rev) {
+      return sublist;
+    }
+    else {
+      return h_reverse(sublist);
+    }
+  }
+}
+
+object *h_index_string(object *string, int start, int end, int rev) {
+  char buffer[start - end + 1];
+  char revbuffer[start - end + 1];
+  int count = 0;
+  int revcount = 0;
+  
+  if (start == end) {
+    return make_character(string->data.string[start]);
+  }
+  
+  else {
+    while (start != end) {
+      buffer[count] = string->data.string[start];
+      start += 1;
+      count += 1;
+    }
+    buffer[count] = '\0';
+  }
+  if (rev) {
+   count -= 1;
+   while (count != -1) {
+     revbuffer[revcount] = buffer[count];
+     revcount += 1;
+     count -= 1;
+   }
+   revbuffer[revcount] = '\0';
+   return make_string(revbuffer);
+  }
+  else {
+    return make_string(buffer);
+  }
+}
+
+object *p_index(object *obj) {
+  int start = cadr(obj)->data.fixnum;
+  int end;
+  object *sequence = car(obj);
+  int len = h_length(sequence)->data.fixnum;
+  int rev = 0;
+  
   if (start < 0) {
     start = len + start;
   }
-  
+
   // Check for end argument
   if (cddr(obj) != the_empty_list) {
     end = caddr(obj)->data.fixnum;
@@ -2101,40 +2162,12 @@ object *h_index_list(object *obj) {
     end = rev;
   }
 
-  // Find first index
-  while (count != start) {
-    count += 1;
-    lst = cdr(lst);
-  }
-  
-  // If we're only getting one index
-  if (start == end) {
-    return car(lst);
-  }
-  
-  // If we're getting a sublist
-  else {
-    while (count != end) {
-      sublist = cons(car(lst), sublist);
-      count += 1;
-      lst = cdr(lst);
-    }
-    if (rev) {
-      return sublist;
-    }
-    else {
-      return h_reverse(sublist);
-    }
-  }
-}
-
-object *p_index(object *obj) {
   switch (car(obj)->type) {
     case PAIR:
-      return h_index_list(obj);
+      return h_index_list(sequence, start, end, rev);
       break;
     case STRING:
-      error("index on strings not implemented yet");
+      return h_index_string(sequence, start, end, rev);
       break;
   }
 }

@@ -671,6 +671,25 @@
   (index a -1 0)
   >>> '(4 3 2 1)
   
+  
+  (define b "world") >>> void
+  (index b 2)
+  >>> #\r
+  (index b -1)
+  >>> #\d
+  
+  (index b 0 5)
+  >>> "world"
+  
+  (index b 0 -1)
+  >>> "world"
+  (index b -3 -1)
+  >>> "rld"
+  
+  (index b 3 0)
+  >>> "row"
+  (index b -1 0)
+  >>> "lrow"
 )
 
 
