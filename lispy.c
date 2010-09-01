@@ -1019,7 +1019,7 @@ object *eval_arguments(object *args, object *env, object *parameters) {
 }
 
 object *h_length(object *obj);    // h_length is used to check length of arguments
-object *p_list(object *exp, object *env);
+object *h_list(object *exp, object *env);
 
 /* eval
 **************************************/
@@ -1120,7 +1120,7 @@ tailcall:
   
   /**  list  **/
   else if (is_primitive_syntax(exp, list_symbol)) {
-    return p_list(cdr(exp), env);
+    return h_list(cdr(exp), env);
   }
 
   /**  Application  **/
@@ -2226,7 +2226,7 @@ object *h_list_from(object *exp, object *env) {
 }
 
 
-object *p_list(object *exp, object *env) {
+object *h_list(object *exp, object *env) {
   // (list 'for ii in sequence if test expression) || (list 'for ii in sequence ii)
   if (car(exp) == for_symbol) {
     h_list_for(cdr(exp), env);
@@ -2240,6 +2240,9 @@ object *p_list(object *exp, object *env) {
   }
 }
 
+object *p_list(object *exp) {
+  error("Body of list dummy procedure should not execute!");
+}
 
 /** ***************************************************************************
 **                                   REPL
@@ -2313,7 +2316,6 @@ void populate_global_environment(void) {
   
   
   // List Procedures
-//  add_procedure("list",   p_list);
   add_procedure("null?",  p_nullp);
   add_procedure("cons",   p_cons);
 
@@ -2362,6 +2364,9 @@ void populate_global_environment(void) {
 
   // System Procedures
   add_procedure("time", p_time);
+  
+  // Constructor Dummy Procedures
+  add_procedure("list",   p_list);
 }
 
 
