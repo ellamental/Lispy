@@ -100,6 +100,9 @@ object *test_symbol;
 
 object *else_symbol;
 object *rest_symbol;
+object *for_symbol;
+object *from_symbol;
+object *list_symbol;
 
 object *the_global_environment;
 
@@ -1016,7 +1019,7 @@ object *eval_arguments(object *args, object *env, object *parameters) {
 }
 
 object *h_length(object *obj);    // h_length is used to check length of arguments
-
+object *p_list(object *exp, object *env);
 
 /* eval
 **************************************/
@@ -1114,11 +1117,15 @@ tailcall:
   else if (is_primitive_syntax(exp, test_symbol)) {
     return test(cdr(exp));
   }
+  
+  /**  list  **/
+  else if (is_primitive_syntax(exp, list_symbol)) {
+    return p_list(cdr(exp), env);
+  }
 
   /**  Application  **/
   else if (is_application(exp)) {
     procedure = eval(car(exp), env);
-    //arguments = list_of_values(cdr(exp), env);
     
     /**  Primitive  **/
     if (is_primitive_procedure(procedure)) {
@@ -1127,12 +1134,8 @@ tailcall:
     
     /**  Compound  **/
     else if (is_compound_procedure(procedure)) {
-      // Check argument length (< = error) (> = extra arguments are not used)
-      //if (h_length(cdr(exp))->data.fixnum < h_length(procedure->data.compound_procedure.parameters)->data.fixnum) {
-      //  error("Not enough arguments");}
-      
       env = extend_environment(procedure->data.compound_procedure.parameters,
-                               eval_arguments(cdr(exp), env, procedure->data.compound_procedure.parameters), //list_of_values(cdr(exp), env),
+                               eval_arguments(cdr(exp), env, procedure->data.compound_procedure.parameters),
                                procedure->data.compound_procedure.env);
       
       // Transform lambda body into begin form
@@ -1290,32 +1293,7 @@ void write(object *obj) {
 /*  I/O
 *************************************************/
 
-//  print
-
-object *p_print(object *arguments) {
-  while (!is_the_empty_list(arguments)) {
-    object *obj;
-    
-    obj = car(arguments);
-    switch (obj->type) {
-      case STRING:
-        printf("%s", obj->data.string);
-        break;
-      case CHARACTER:
-        printf("%c", obj->data.character);
-        break;
-      default:
-        write(obj);
-    }
-    arguments = cdr(arguments);
-  }
-  printf("\n");
-  return Void;
-}
-
-
 //  display
-//  Same as print except doesn't append a newline at the end
 
 object *p_display(object *arguments) {
   while (!is_the_empty_list(arguments)) {
@@ -1334,6 +1312,16 @@ object *p_display(object *arguments) {
     }
     arguments = cdr(arguments);
   }
+  return Void;
+}
+
+
+//  print
+//  Same as display except it prints a newline after displaying all arguments
+
+object *p_print(object *arguments) {
+  p_display(arguments);
+  printf("\n");
   return Void;
 }
 
@@ -1363,11 +1351,11 @@ object *p_load(object *arguments) {
 ************************************************/
 
 //  list
-
+/*
 object *p_list(object *arguments) {
   return arguments;
 }
-
+*/
 
 //  null?
 
@@ -2133,17 +2121,15 @@ object *p_index(object *obj) {
     start = len + start;
   }
 
-  // Check for end argument
+  // If end argument is not supplied set end to start
   if (cddr(obj) != the_empty_list) {
     end = caddr(obj)->data.fixnum;
   }
-  // Else set end to start
   else {
     end = start;
   }
   
-  // Normalize negative end 
-  // Add one so that (index lst 0 -1) returns whole list
+  // Normalize negative end and add one so that (index lst 0 -1) returns whole list
   if (end < 0) {
     end = len + end + 1;
   } 
@@ -2192,6 +2178,67 @@ object *p_time(object *arguments) {
   return make_fixnum(time(NULL));
 }
 
+
+//  Sequence Constructors / Comprehensions
+//_____________________________________________//
+
+// DONE (list expression ...)
+// DONE (list from sequence)
+// DONE (list from sequence if test)
+// (list for ii in sequence expression)
+// (list for ii in sequence if test expression)  // test ~= odd? || (lambda (x) (odd? x))
+
+object *make_test(object *test, object *arg) {
+  return cons(test, cons(arg, the_empty_list));
+}
+
+object *h_list_for(object *exp, object *env) {
+  return True;
+}
+
+object *h_list_from(object *exp, object *env) {
+  object *result_list = the_empty_list;
+  object *seq = eval(car(exp), env);
+  object *test;
+  
+  // (list from sequence)
+  if (cdr(exp) == the_empty_list) {
+    while (h_emptyp(seq) != True) {
+      result_list = cons(h_first(seq), result_list);
+      seq = h_rest(seq);
+    }
+    return h_reverse(result_list);
+  }
+  // (list from sequence if test) -> where test is a function that accepts one argument
+  else {
+    test = caddr(exp);
+    while (h_emptyp(seq) != True) {
+      if (eval(make_test(test, h_first(seq)), env) == True) {
+        result_list = cons(h_first(seq), result_list);
+        seq = h_rest(seq);
+      }
+      else {
+        seq = h_rest(seq);
+      }
+    }
+    return result_list;
+  }
+}
+
+
+object *p_list(object *exp, object *env) {
+  // (list 'for ii in sequence if test expression) || (list 'for ii in sequence ii)
+  if (car(exp) == for_symbol) {
+    h_list_for(cdr(exp), env);
+  }
+  // (list 'from sequence if test) || (list 'from sequence)
+  else if (car(exp) == from_symbol) {
+    h_list_from(cdr(exp), env);
+  }
+  else {
+    return list_of_values(exp, env);
+  }
+}
 
 
 /** ***************************************************************************
@@ -2244,7 +2291,10 @@ void populate_global_environment(void) {
 
   else_symbol         = make_symbol("else");
   rest_symbol         = make_symbol("&rest");
-
+  for_symbol          = make_symbol("for");
+  from_symbol         = make_symbol("from");
+  list_symbol         = make_symbol("list");
+  
   define_macro_symbol = make_symbol("define-macro");
   test_symbol         = make_symbol("test");
   
@@ -2263,7 +2313,7 @@ void populate_global_environment(void) {
   
   
   // List Procedures
-  add_procedure("list",   p_list);
+//  add_procedure("list",   p_list);
   add_procedure("null?",  p_nullp);
   add_procedure("cons",   p_cons);
 
