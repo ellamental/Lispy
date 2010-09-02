@@ -322,6 +322,8 @@ object *set_cdr(object *obj, object* value) {
 #define cdddar(obj) cdr(cdr(cdr(car(obj))))
 #define cddddr(obj) cdr(cdr(cdr(cdr(obj))))
 #define caddddr(obj) car(cdr(cdr(cdr(cdr(obj)))))
+#define cadddddr(obj) car(cdr(cdr(cdr(cdr(cdr(obj))))))
+#define caddddddr(obj) car(cdr(cdr(cdr(cdr(cdr(cdr(obj)))))))
 
 
 /* PRIMITIVE_PROCEDUREs
@@ -360,6 +362,9 @@ char is_compound_procedure(object *obj) {
   return obj->type == COMPOUND_PROCEDURE;
 }
 
+char is_procedure(object *obj) {
+  return obj->type == COMPOUND_PROCEDURE || obj->type == PRIMITIVE_PROCEDURE;
+}
 
 /* MACROs
 **************************************/
@@ -2182,19 +2187,59 @@ object *p_time(object *arguments) {
 //  Sequence Constructors / Comprehensions
 //_____________________________________________//
 
-// DONE (list expression ...)
-// DONE (list from sequence)
-// DONE (list from sequence if test)
-// (list for ii in sequence expression)
-// (list for ii in sequence if test expression)  // test ~= odd? || (lambda (x) (odd? x))
 
 object *make_test(object *test, object *arg) {
   return cons(test, cons(arg, the_empty_list));
 }
 
-object *h_list_for(object *exp, object *env) {
-  return True;
+object *make_expression(object *exp, object *var) {
+  if ((is_pair(exp) && !is_lambda(exp)) || (var == exp)) {
+    return make_lambda(cons(var, the_empty_list), 
+                       cons(exp, the_empty_list));
+  }
+  else {
+    return exp;
+  }
 }
+
+//  list
+
+object *h_list_for(object *exp, object *env) {
+  object *result_list = the_empty_list;
+  object *var = car(exp);
+  object *seq = eval(caddr(exp), env);
+  object *expression;
+  object *test;
+    
+  // (list for ii in sequence if test expression)
+  if (cadddr(exp) == if_symbol) {
+    test = make_expression(caddddr(exp), var);
+    expression = make_expression(cadddddr(exp), var);
+    while (h_emptyp(seq) != True) {
+      if (eval(make_test(test, h_first(seq)), env) == True) {
+        result_list = cons(eval(make_test(expression, h_first(seq)), env), 
+                           result_list);
+        seq = h_rest(seq);
+      }
+      else {
+        seq = h_rest(seq);
+      }
+    }
+    return result_list;
+  }
+
+  // (list for ii in sequence expression)
+  else {
+    expression = make_expression(cadddr(exp), var);
+    while (h_emptyp(seq) != True) {
+      result_list = cons(eval(make_test(expression, h_first(seq)), env), 
+                          result_list);
+      seq = h_rest(seq);
+    }
+    return h_reverse(result_list);
+  }
+}
+
 
 object *h_list_from(object *exp, object *env) {
   object *result_list = the_empty_list;
@@ -2209,7 +2254,7 @@ object *h_list_from(object *exp, object *env) {
     }
     return h_reverse(result_list);
   }
-  // (list from sequence if test) -> where test is a function that accepts one argument
+  // (list from sequence if test)
   else {
     test = caddr(exp);
     while (h_emptyp(seq) != True) {
@@ -2225,13 +2270,12 @@ object *h_list_from(object *exp, object *env) {
   }
 }
 
-
 object *h_list(object *exp, object *env) {
-  // (list 'for ii in sequence if test expression) || (list 'for ii in sequence ii)
+  // (list for ii in sequence if test expression) || (list for ii in sequence expression)
   if (car(exp) == for_symbol) {
     h_list_for(cdr(exp), env);
   }
-  // (list 'from sequence if test) || (list 'from sequence)
+  // (list from sequence if test) || (list from sequence)
   else if (car(exp) == from_symbol) {
     h_list_from(cdr(exp), env);
   }
@@ -2241,7 +2285,7 @@ object *h_list(object *exp, object *env) {
 }
 
 object *p_list(object *exp) {
-  error("Body of list dummy procedure should not execute!");
+  error("list dummy procedure should not execute!");
 }
 
 /** ***************************************************************************

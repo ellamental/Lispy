@@ -581,6 +581,46 @@
 
 
 ;;  Sequence Constructors / Comprehensions
+;;_____________________________________________;;
+;;
+;; A representation of every possible constructor expression.  Each constructor
+;; should support this interface.
+;;
+;; constructor = list or string or vector or any other constructor
+;; pair = (+ ii 1) or (= ii 1)  or any other expression not wrapped in lambda
+;; lambda = (lambda (x) x)      or any other lambda expression
+;; procedure = char? or odd?    or any other procedure expressed as a symbol
+
+;;   (constructor element-1 ... element-n)
+
+;;   (constructor from sequence)
+;;   (constructor from sequence if lambda)
+;;   (constructor from sequence if procedure)
+
+;;   (constructor for ii in sequence ii)
+;;   (constructor for ii in sequence pair)
+;;   (constructor for ii in sequence lambda)
+;;   (constructor for ii in sequence procedure)
+;; 
+;;   (constructor for ii in sequence if ii        ii)
+;;   (constructor for ii in sequence if pair      ii)
+;;   (constructor for ii in sequence if lambda    ii)
+;;   (constructor for ii in sequence if procedure ii)
+;; 
+;;   (constructor for ii in sequence if ii        pair)
+;;   (constructor for ii in sequence if pair      pair)
+;;   (constructor for ii in sequence if lambda    pair)
+;;   (constructor for ii in sequence if procedure pair)
+;; 
+;;   (constructor for ii in sequence if ii        lambda)
+;;   (constructor for ii in sequence if pair      lambda)
+;;   (constructor for ii in sequence if lambda    lambda)
+;;   (constructor for ii in sequence if procedure lambda)
+;;
+;;   (constructor for ii in sequence if ii        procedure)
+;;   (constructor for ii in sequence if pair      procedure)
+;;   (constructor for ii in sequence if lambda    procedure)
+;;   (constructor for ii in sequence if procedure procedure)
 ;;_______________________________________________________;;
 
 
@@ -603,7 +643,29 @@
   (list from "hello" if (lambda (x) (equal? x #\l)))
   >>> '(#\l #\l)
   
+  (list for ii in "hello" ii)
+  >>> '(#\h #\e #\l #\l #\o)
+  (list for ii in "hello" (->number ii))
+  >>> '(104 101 108 108 111)
+  (list for ii in '(1 2 3) (lambda (x) (+ 1 x)))
+  >>> '(2 3 4)
+  
+  (list for ii in "hello" if (equal? ii #\l) ii)
+  >>> '(#\l #\l)
+  (list for ii in "hello" if (lambda (x) (equal? x #\l)) ii)
+  >>> '(#\l #\l)
+  
+  (list for ii in "hello" if (equal? ii #\l) (->number ii))
+  >>> '(108 108)
+  (list for ii in "hello" if (equal? ii #\l) (lambda (x) (+ 10 (->number x))))
+  >>> '(118 118)
+  
+  (list for ii in "hello" ->number)
+  >>> '(104 101 108 108 111)
 )
+
+
+
 
 ;;  Sequence Procedures
 ;;_______________________________________________________;;
@@ -826,20 +888,21 @@
 ;;_______________________________________________________;;
 
 ;;  time
+;;  Uncomment code when modifying (time) otherwise it takes too long to test
 ;;_________________________;;
 
-(test
-  (define (sleep n)
-    (define start (time))
-    (define (sleep-loop)
-      (if (> (- (time) start) (- n 1))
-        (- (time) start)
-        (sleep-loop)))
-    (sleep-loop))
-  >>> void
-  (sleep 1)
-  >>> 1
-)
+;; (test
+;;   (define (sleep n)
+;;     (define start (time))
+;;     (define (sleep-loop)
+;;       (if (> (- (time) start) (- n 1))
+;;         (- (time) start)
+;;         (sleep-loop)))
+;;     (sleep-loop))
+;;   >>> void
+;;   (sleep 1)
+;;   >>> 1
+;; )
 
 
 ;;  
