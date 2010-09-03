@@ -94,6 +94,8 @@ object *cond_symbol;
 object *lambda_symbol;
 object *begin_symbol;
 object *let_symbol;
+object *apply_symbol;
+object *eval_symbol;
 
 object *define_macro_symbol;
 object *test_symbol;
@@ -1112,6 +1114,25 @@ tailcall:
     goto tailcall;
   }
   
+  /**  apply  **/
+  else if (is_primitive_syntax(exp, apply_symbol)) {
+    exp = cons(cadr(exp), eval(caddr(exp), env));
+    goto tailcall;
+  }
+  
+  /**  eval  **/
+  else if (is_primitive_syntax(exp, eval_symbol)) {
+    if (cddr(exp) != the_empty_list) {
+      env = eval(caddr(exp), env);
+      exp = eval(cadr(exp), env);
+      goto tailcall;
+    }
+    else {
+      exp = eval(cadr(exp), env);
+      goto tailcall;
+    }
+  }
+
   /**  define-macro  **/
   else if (is_primitive_syntax(exp, define_macro_symbol)) {
     define_variable(cadr(exp), make_macro(caddr(exp)), env);
@@ -1294,6 +1315,30 @@ void write(object *obj) {
 ** Helper procedures are prefixed with h_ and are for internal use.
 ** Predicates (like equal? or number?) end with a p (p_equalp, p_numberp)
 **/
+
+//  Language Procedures
+//_____________________________________________//
+object *make_initial_environment(void);
+
+object *p_apply(object *arguments) {
+  error("apply procedure should never be called");
+}
+
+object *p_eval(object *arguments) {
+  error("eval procedure should never be called");
+}
+
+object *p_global_environment(object *arguments) {
+  return the_global_environment;
+}
+
+object *p_initial_environment(object *arguments) {
+  return make_initial_environment();
+}
+
+object *p_empty_environment(object *arguments) {
+  return the_empty_list;
+}
 
 /*  I/O
 *************************************************/
@@ -2188,7 +2233,7 @@ object *p_time(object *arguments) {
 //_____________________________________________//
 
 
-object *make_test(object *test, object *arg) {
+object *make_application(object *test, object *arg) {
   return cons(test, cons(arg, the_empty_list));
 }
 
@@ -2216,8 +2261,8 @@ object *h_list_for(object *exp, object *env) {
     test = make_expression(caddddr(exp), var);
     expression = make_expression(cadddddr(exp), var);
     while (h_emptyp(seq) != True) {
-      if (eval(make_test(test, h_first(seq)), env) == True) {
-        result_list = cons(eval(make_test(expression, h_first(seq)), env), 
+      if (eval(make_application(test, h_first(seq)), env) == True) {
+        result_list = cons(eval(make_application(expression, h_first(seq)), env), 
                            result_list);
         seq = h_rest(seq);
       }
@@ -2232,7 +2277,7 @@ object *h_list_for(object *exp, object *env) {
   else {
     expression = make_expression(cadddr(exp), var);
     while (h_emptyp(seq) != True) {
-      result_list = cons(eval(make_test(expression, h_first(seq)), env), 
+      result_list = cons(eval(make_application(expression, h_first(seq)), env), 
                           result_list);
       seq = h_rest(seq);
     }
@@ -2258,7 +2303,7 @@ object *h_list_from(object *exp, object *env) {
   else {
     test = caddr(exp);
     while (h_emptyp(seq) != True) {
-      if (eval(make_test(test, h_first(seq)), env) == True) {
+      if (eval(make_application(test, h_first(seq)), env) == True) {
         result_list = cons(h_first(seq), result_list);
         seq = h_rest(seq);
       }
@@ -2288,71 +2333,41 @@ object *p_list(object *exp) {
   error("list dummy procedure should not execute!");
 }
 
+
+//  string
+
+object *h_string(object *exp, object *env) {
+  error("String constructor not implemented yet");
+}
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
 
 
-void init(void) {
-  the_empty_list = alloc_object();
-  the_empty_list->type = THE_EMPTY_LIST;
-  
-  the_global_environment = extend_environment(the_empty_list,
-                                              the_empty_list,
-                                              the_empty_list);
-
-  False = alloc_object();
-  False->type = BOOLEAN;
-  False->data.boolean = 0;
-  
-  True = alloc_object();
-  True->type = BOOLEAN;
-  True->data.boolean = 1;
-  
-  Void = alloc_object();
-  Void->type = VOID;
-
-}
-
-void populate_global_environment(void) {
-  
-  symbol_table = the_empty_list;
- 
+void populate_initial_environment(object *env) {
+   
   /* Self-evaluating Symbols
   **********************************/
-  define_variable(make_symbol("False"), False, the_global_environment);
-  define_variable(make_symbol("True"), True, the_global_environment);
-  define_variable(make_symbol("void"), Void, the_global_environment);
+  define_variable(make_symbol("False"), False, env);
+  define_variable(make_symbol("True"), True, env);
+  define_variable(make_symbol("void"), Void, env);
 
-  
-  /* Primitive Forms
-  **********************************/
-  quote_symbol        = make_symbol("quote");
-  set_symbol          = make_symbol("set!");
-  define_symbol       = make_symbol("define");
-  if_symbol           = make_symbol("if");
-  cond_symbol         = make_symbol("cond");
-  lambda_symbol       = make_symbol("lambda");
-  begin_symbol        = make_symbol("begin");
-  let_symbol          = make_symbol("let");
-
-  else_symbol         = make_symbol("else");
-  rest_symbol         = make_symbol("&rest");
-  for_symbol          = make_symbol("for");
-  from_symbol         = make_symbol("from");
-  list_symbol         = make_symbol("list");
-  
-  define_macro_symbol = make_symbol("define-macro");
-  test_symbol         = make_symbol("test");
-  
   
   /* Primitive Procedures
   **********************************/
   #define add_procedure(scheme_name, c_name)       \
     define_variable(make_symbol(scheme_name),      \
                     make_primitive_procedure(c_name),   \
-                    the_global_environment);
+                    env);
 
+  // Language Procedures
+  add_procedure("apply",               p_apply);
+  add_procedure("eval",                p_eval);
+  add_procedure("empty-environment",   p_empty_environment);
+  add_procedure("initial-environment", p_initial_environment);
+  add_procedure("global-environment",  p_global_environment);
+  
   // I/O Procedures
   add_procedure("print",   p_print);
   add_procedure("display", p_display);
@@ -2360,21 +2375,21 @@ void populate_global_environment(void) {
   
   
   // List Procedures
-  add_procedure("null?",  p_nullp);
-  add_procedure("cons",   p_cons);
+  add_procedure("null?",   p_nullp);
+  add_procedure("cons",    p_cons);
 
   
   // Equality Procedures
-  add_procedure("is?",    p_isp);
-  add_procedure("=",      p_equalp);
-  add_procedure("equal?", p_equalp);
-  add_procedure("not",    p_not);
+  add_procedure("is?",     p_isp);
+  add_procedure("=",       p_equalp);
+  add_procedure("equal?",  p_equalp);
+  add_procedure("not",     p_not);
   
   
   // Numeric Procedures
-  add_procedure("-", p_sub);
-  add_procedure("*", p_mul);
-  add_procedure("/", p_div);
+  add_procedure("-",  p_sub);
+  add_procedure("*",  p_mul);
+  add_procedure("/",  p_div);
 
 
   // Polymorphic Procedures
@@ -2395,22 +2410,75 @@ void populate_global_environment(void) {
  
   
   // Sequence Procedures
-  add_procedure("first",  p_first);
-  add_procedure("rest",   p_rest);
-  add_procedure("empty?", p_emptyp);
-  add_procedure("length", p_length);
-  add_procedure("index",  p_index);
+  add_procedure("first",    p_first);
+  add_procedure("rest",     p_rest);
+  add_procedure("empty?",   p_emptyp);
+  add_procedure("length",   p_length);
+  add_procedure("index",    p_index);
 
   
   // Meta-data Procedures
-  add_procedure("doc", p_doc);
+  add_procedure("doc",      p_doc);
   
 
   // System Procedures
-  add_procedure("time", p_time);
+  add_procedure("time",     p_time);
   
   // Constructor Dummy Procedures
-  add_procedure("list",   p_list);
+  add_procedure("list",     p_list);
+}
+
+
+object *make_initial_environment(void) {
+  object *env;
+  env = extend_environment(the_empty_list,
+                           the_empty_list,
+                           the_empty_list);
+  populate_initial_environment(env);
+  return env;
+}
+
+
+void init(void) {
+  the_empty_list = alloc_object();
+  the_empty_list->type = THE_EMPTY_LIST;
+  
+  False = alloc_object();
+  False->type = BOOLEAN;
+  False->data.boolean = 0;
+  
+  True = alloc_object();
+  True->type = BOOLEAN;
+  True->data.boolean = 1;
+  
+  Void = alloc_object();
+  Void->type = VOID;
+
+  symbol_table = the_empty_list;
+  
+  /* Primitive Forms
+  **********************************/
+  quote_symbol        = make_symbol("quote");
+  set_symbol          = make_symbol("set!");
+  define_symbol       = make_symbol("define");
+  if_symbol           = make_symbol("if");
+  cond_symbol         = make_symbol("cond");
+  lambda_symbol       = make_symbol("lambda");
+  begin_symbol        = make_symbol("begin");
+  let_symbol          = make_symbol("let");
+  apply_symbol        = make_symbol("apply");
+  eval_symbol         = make_symbol("eval");
+
+  else_symbol         = make_symbol("else");
+  rest_symbol         = make_symbol("&rest");
+  for_symbol          = make_symbol("for");
+  from_symbol         = make_symbol("from");
+  list_symbol         = make_symbol("list");
+  
+  define_macro_symbol = make_symbol("define-macro");
+  test_symbol         = make_symbol("test");
+  
+  the_global_environment = make_initial_environment();
 }
 
 
@@ -2442,7 +2510,6 @@ int main(void) {
          "****************************************\n");
 
   init();
-  populate_global_environment();
   
   // Load and run unit tests
   p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.lispy"),
