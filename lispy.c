@@ -1118,12 +1118,32 @@ tailcall:
   
   /**  and  **/
   else if (is_primitive_syntax(exp, and_symbol)) {
-    error("and not implemented yet");
+    exp = cdr(exp);
+    while (!is_last_exp(exp)) {
+      if (eval(car(exp), env) != False) {
+        exp = cdr(exp);
+      }
+      else {
+        return False;
+      }
+    }
+    return car(exp);
   }
   
   /**  or  **/
   else if (is_primitive_syntax(exp, or_symbol)) {
-    error("or not implemented yet");
+    object *result;
+    exp = cdr(exp);
+    while (exp != the_empty_list) {
+      result = eval(car(exp), env);
+      if (result == False) {
+        exp = cdr(exp);
+      }
+      else {
+        return result;
+      }
+    }
+    return False;
   }
   
   /**  apply  **/
