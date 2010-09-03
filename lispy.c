@@ -94,6 +94,8 @@ object *cond_symbol;
 object *lambda_symbol;
 object *begin_symbol;
 object *let_symbol;
+object *and_symbol;
+object *or_symbol;
 object *apply_symbol;
 object *eval_symbol;
 
@@ -1112,6 +1114,16 @@ tailcall:
   else if (is_primitive_syntax(exp, let_symbol)) {
     exp = make_let(cdr(exp));
     goto tailcall;
+  }
+  
+  /**  and  **/
+  else if (is_primitive_syntax(exp, and_symbol)) {
+    error("and not implemented yet");
+  }
+  
+  /**  or  **/
+  else if (is_primitive_syntax(exp, or_symbol)) {
+    error("or not implemented yet");
   }
   
   /**  apply  **/
@@ -2466,6 +2478,8 @@ void init(void) {
   lambda_symbol       = make_symbol("lambda");
   begin_symbol        = make_symbol("begin");
   let_symbol          = make_symbol("let");
+  and_symbol          = make_symbol("and");
+  or_symbol           = make_symbol("or");
   apply_symbol        = make_symbol("apply");
   eval_symbol         = make_symbol("eval");
 
