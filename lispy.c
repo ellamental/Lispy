@@ -41,7 +41,7 @@ typedef enum {
   FIXNUM, FLONUM,
 
   // Sequences
-  STRING, PAIR
+  STRING, PAIR, VECTOR
 
 } object_type;
 
@@ -59,6 +59,10 @@ typedef struct object {
       struct object *car;
       struct object *cdr;
     } pair;
+    struct {                                  // VECTOR
+      long int length;
+      struct object **vec;
+    } vector;
     struct {                                  // PRIMITIVE_PROCEDURE
       struct object *(*fn) (struct object *arguments);
     } primitive_procedure;
@@ -107,14 +111,24 @@ object *rest_symbol;
 object *for_symbol;
 object *from_symbol;
 object *list_symbol;
+object *vector_symbol;
 
 object *the_global_environment;
+
+
+/* Function Prototypes
+****************************/
 
 object *cons(object *car, object *cdr);
 object *car(object *pair);
 object *cdr(object *pair);
 
 void write(object *obj);
+object *h_vector(object *exp, object *env);
+object *h_length(object *obj);
+object *h_list(object *exp, object *env);
+
+
 
 /* Object Allocation
 **************************************/
@@ -228,6 +242,32 @@ object *make_string(char *value) {
 
 char is_string(object *obj) {
   return obj->type == STRING;
+}
+
+
+/* VECTORs
+**************************************/
+
+object *make_vector(object *exp) {
+  object *obj;
+  long int len = h_length(exp)->data.fixnum;
+  long int count = 0;
+  
+  obj = alloc_object();
+  obj->type = VECTOR;
+  obj->data.vector.length = len;
+  obj->data.vector.vec = malloc(len);
+  if (obj->data.vector.vec == NULL) {
+    error("out of memory\n");
+  }
+
+  while (exp != the_empty_list) {
+    obj->data.vector.vec[count] = car(exp);
+    exp = cdr(exp);
+    count += 1;
+  }
+
+  return obj;
 }
 
 
@@ -685,7 +725,8 @@ object *read(FILE *in) {
       case '\\':
         return read_character(in);
       case '(':
-        error("Vector syntax not implemented yet");
+        ungetc(c, in);
+        return cons(vector_symbol, read(in));
       default:
         error("Unrecognized syntax");
     }
@@ -1027,8 +1068,6 @@ object *eval_arguments(object *args, object *env, object *parameters) {
   }
 }
 
-object *h_length(object *obj);    // h_length is used to check length of arguments
-object *h_list(object *exp, object *env);
 
 /* eval
 **************************************/
@@ -1181,6 +1220,11 @@ tailcall:
     return h_list(cdr(exp), env);
   }
 
+  /**  vector  **/
+  else if (is_primitive_syntax(exp, vector_symbol)) {
+    return h_vector(exp, env);
+  }
+
   /**  Application  **/
   else if (is_application(exp)) {
     procedure = eval(car(exp), env);
@@ -1247,8 +1291,22 @@ void write_pair(object *pair) {
     write(cdr_obj);
   }
 }
+
+
+void write_vector(object *vec) {
+  long int count = 0;
+  long int len = vec->data.vector.length - 1;
   
-  
+  while (count < len) {
+    write(vec->data.vector.vec[count]);
+    printf(" ");
+    count += 1;
+  }
+  // If last element printed in while loop it would display as #(1 2 3 )
+  write(vec->data.vector.vec[count]);
+}
+
+
 void write(object *obj) {
   char c;
   char *str;
@@ -1314,6 +1372,12 @@ void write(object *obj) {
     case PAIR:                                        // PAIR
       printf("(");
       write_pair(obj);
+      printf(")");
+      break;
+    
+    case VECTOR:
+      printf("#(");
+      write_vector(obj);
       printf(")");
       break;
 
@@ -1516,6 +1580,7 @@ object *p_isp(object *arguments) {
 //  equal?
 
 object *h_equalp(object *obj_1, object *obj_2) {
+  int count = 0;
   object *result;
   object *temp_1;
   object *temp_2;
@@ -1578,7 +1643,20 @@ object *h_equalp(object *obj_1, object *obj_2) {
         }
       }
       return True;
-          
+
+    case VECTOR:
+      if (obj_1->data.vector.length != obj_2->data.vector.length) {
+        return False;
+      }
+      while (count < obj_1->data.vector.length) {
+        if (h_equalp(obj_1->data.vector.vec[count],
+                     obj_2->data.vector.vec[count]) == False) {
+          return False;
+        }
+        count += 1;
+      }
+      return True;
+      
     default:
       error("Unsupported types for equal?");
   }
@@ -2372,6 +2450,15 @@ object *h_string(object *exp, object *env) {
   error("String constructor not implemented yet");
 }
 
+
+//  vector
+
+object *h_vector(object *exp, object *env) {
+  make_vector(list_of_values(cdr(exp), env));
+  // error("Vectors not implemented yet");
+}
+
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -2508,6 +2595,7 @@ void init(void) {
   for_symbol          = make_symbol("for");
   from_symbol         = make_symbol("from");
   list_symbol         = make_symbol("list");
+  vector_symbol       = make_symbol("vector");
   
   define_macro_symbol = make_symbol("define-macro");
   test_symbol         = make_symbol("test");
