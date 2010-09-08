@@ -2157,7 +2157,7 @@ object *h_first(object *seq) {
       return make_character(seq->data.string[0]);
       break;
     case VECTOR:
-      error("first on vectors not implemented yet");
+      return seq->data.vector.vec[0];
       break;
     default:
       error("Unsupported type for first");
@@ -2209,7 +2209,10 @@ object *h_emptyp(object *obj) {
       break;
       
     case VECTOR:
-      error("empty? on vectors not implemented yet");
+      if (obj->data.vector.length == 0) {
+        return True;
+      }
+      return False;
       break;
   }
   return False;
@@ -2239,7 +2242,7 @@ object *h_length(object *obj) {
     return make_fixnum(strlen(obj->data.string));
   }
   else if (obj->type == VECTOR) {
-    error("length on vectors not implemented yet");
+    return make_fixnum(obj->data.vector.length);
   }
   else {
     error("Unsupported type for length");

@@ -754,6 +754,8 @@
   >>> 1
   (first "hello")
   >>> #\h
+  (first #(1 2 3))
+  >>> 1
 )
 
 
@@ -784,6 +786,8 @@
   >>> False
   (empty? "")
   >>> True
+  (empty? #())
+  >>> True
 )
 
 ;;  length
@@ -798,6 +802,8 @@
   >>> 5
   (length "")
   >>> 0
+  (length #(1 2 3))
+  >>> 3
 )
 
 ;;  index
