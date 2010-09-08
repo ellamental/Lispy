@@ -450,6 +450,15 @@
   (define (a) 42) >>> void
   (is? a a)
   >>> True
+  (define str "hello") >>> void
+  (is? str str)
+  >>> True
+  (define pr '(1 2 3)) >>> void
+  (is? pr pr)
+  >>> True
+  (define vec #(1 2)) >>> void
+  (is? vec vec)
+  >>> True
   
   (is? "hi" "hi")
   >>> False
@@ -561,6 +570,8 @@
   >>> '("sequence" "pair")
   (type '(1 2 3))
   >>> '("sequence" "pair")
+  (type #(1 2 3))
+  >>> '("sequence" "vector")
 )  
 
 
@@ -587,6 +598,8 @@
   (type? (cons 1 2) '(#\a #\b))
   >>> True
   (type? '(1 2 3) (list "hi" "bye"))
+  >>> True
+  (type? #(1 2 3) (vector "hi" "bye"))
   >>> True
 )  
 

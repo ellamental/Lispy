@@ -1571,6 +1571,7 @@ object *p_isp(object *arguments) {
     case BOOLEAN: 
     case STRING:
     case PAIR:
+    case VECTOR:
       return (obj_1 == obj_2) ? True : False;
       break;
   }
@@ -1719,13 +1720,16 @@ object *h_add(object *obj_1, object *obj_2) {
     return make_string(sbuffer);
   }
   
+  if (obj_1->type == VECTOR) {
+    error("Addition on vectors not implemented yet");
+  }
+  
   switch (obj_1->type) {
     case CHARACTER:
       cbuffer[0] = obj_1->data.character;
       cbuffer[1] = obj_2->data.character;
       cbuffer[2] = '\0';
       return make_string(cbuffer);
-
   }
 }
 
@@ -1867,20 +1871,26 @@ object *h_greater_than(object *obj_1, object *obj_2) {
             True : False;
   }
   
+  else if (obj_1->type == SYMBOL) {
+    return (strcmp(obj_1->data.symbol, 
+                   obj_2->data.symbol) == 1) ?
+            True : False;
+  }
+
   else if (obj_1->type == STRING) {
     return (strcmp(obj_1->data.string, 
                    obj_2->data.string) == 1) ?
             True : False;
   }
 
-  else if (obj_1->type == SYMBOL) {
-    return (strcmp(obj_1->data.symbol, 
-                   obj_2->data.symbol) == 1) ?
-            True : False;
+  else if (obj_1->type == PAIR) {
+    error("> on pairs not implemented yet");
   }
-/*  else if (obj_1->type == PAIR) {
+  
+  else if (obj_1->type == VECTOR) {
+    error("> on vectors not implemented yet");
   }
-*/
+
 }
 
 object *p_greater_than(object *arguments) {
@@ -1915,21 +1925,27 @@ object *h_less_than(object *obj_1, object *obj_2) {
     return (obj_1->data.character < obj_2->data.character) ?
             True : False;
   }
-  
-  else if (obj_1->type == STRING) {
-    return (strcmp(obj_1->data.string, 
-                   obj_2->data.string) == -1) ?
-            True : False;
-  }
 
   else if (obj_1->type == SYMBOL) {
     return (strcmp(obj_1->data.symbol, 
                    obj_2->data.symbol) == -1) ?
             True : False;
   }
-/*  else if (obj_1->type == PAIR) {
+  
+  else if (obj_1->type == STRING) {
+    return (strcmp(obj_1->data.string, 
+                   obj_2->data.string) == -1) ?
+            True : False;
   }
-*/
+  
+  else if (obj_1->type == PAIR) {
+    error("< on pairs not implemented yet");
+  }
+
+  else if (obj_1->type == VECTOR) {
+    error("< on vectors not implemented yet");
+  }
+
 }
 
 object *p_less_than(object *arguments) {
@@ -2007,6 +2023,9 @@ object *h_type(object *obj) {
     
     case PAIR:
       return cons(make_string("sequence"), cons(make_string("pair"), the_empty_list));
+
+    case VECTOR:
+      return cons(make_string("sequence"), cons(make_string("vector"), the_empty_list));
   }
 }
 
@@ -2055,6 +2074,9 @@ object *h_to_string(object *obj) {
       buf[count] = '\0';
       return make_string(buf);
       break;
+    case VECTOR:
+      error("->string on vectors not implemented yet");
+      break;
   }
 }
 
@@ -2080,6 +2102,9 @@ object *h_to_number(object *obj) {
       break;
     case CHARACTER:
       return make_fixnum(obj->data.character);
+      break;
+    default:
+      error("Unsupported type for ->number");
       break;
   }
 }
@@ -2107,6 +2132,9 @@ object *h_to_char(object *obj) {
       }
       return char_list;
       break;
+    default:
+      error("Unsupported type for ->char");
+      break;
   }
 }
 
@@ -2128,6 +2156,12 @@ object *h_first(object *seq) {
     case STRING:
       return make_character(seq->data.string[0]);
       break;
+    case VECTOR:
+      error("first on vectors not implemented yet");
+      break;
+    default:
+      error("Unsupported type for first");
+      break;
   }
 }
 
@@ -2145,6 +2179,12 @@ object *h_rest(object *seq) {
       break;
     case STRING:
       return make_string(&seq->data.string[1]);
+      break;
+    case VECTOR:
+      error("rest on vectors not implemented yet");
+      break;
+    default:
+      error("Unsupported type for rest");
       break;
   }
 }
@@ -2166,6 +2206,10 @@ object *h_emptyp(object *obj) {
       if (!strcmp(obj->data.string, "")) {  // strcmp returns 0 if equal
         return True;
       }
+      break;
+      
+    case VECTOR:
+      error("empty? on vectors not implemented yet");
       break;
   }
   return False;
@@ -2193,6 +2237,9 @@ object *h_length(object *obj) {
   }
   else if (obj->type == STRING) {
     return make_fixnum(strlen(obj->data.string));
+  }
+  else if (obj->type == VECTOR) {
+    error("length on vectors not implemented yet");
   }
   else {
     error("Unsupported type for length");
@@ -2314,6 +2361,12 @@ object *p_index(object *obj) {
       break;
     case STRING:
       return h_index_string(sequence, start, end, rev);
+      break;
+    case VECTOR:
+      error("index on vectors not implemented yet");
+      break;
+    default:
+      error("Unsupported type for index");
       break;
   }
 }
@@ -2455,7 +2508,6 @@ object *h_string(object *exp, object *env) {
 
 object *h_vector(object *exp, object *env) {
   make_vector(list_of_values(cdr(exp), env));
-  // error("Vectors not implemented yet");
 }
 
 
