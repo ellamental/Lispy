@@ -112,6 +112,7 @@ object *for_symbol;
 object *from_symbol;
 object *list_symbol;
 object *vector_symbol;
+object *string_symbol;
 
 object *the_global_environment;
 
@@ -127,6 +128,8 @@ void write(object *obj);
 object *h_vector(object *exp, object *env);
 object *h_length(object *obj);
 object *h_list(object *exp, object *env);
+object *h_string(object *exp, object *env);
+object *h_emptyp(object *obj);
 
 
 
@@ -240,6 +243,29 @@ object *make_string(char *value) {
   return obj;
 }
 
+object *make_string_from_list(object *exp) {
+  object *obj;
+  int count = 0;
+  
+  obj = alloc_object();
+  obj->type = STRING;
+  obj->data.string = malloc(h_length(exp)->data.fixnum + 1);
+  if (obj->data.string == NULL) {
+    error("out of memory");
+  }
+  
+  while (exp != the_empty_list) {
+    obj->data.string[count] = car(exp)->data.character;
+    exp = cdr(exp);
+    count += 1;
+  }
+  
+  obj->data.string[count] = '\0';
+  
+  return obj;
+}
+  
+
 char is_string(object *obj) {
   return obj->type == STRING;
 }
@@ -248,7 +274,7 @@ char is_string(object *obj) {
 /* VECTORs
 **************************************/
 
-object *make_vector(object *exp) {
+object *make_vector_from_list(object *exp) {
   object *obj;
   long int len = h_length(exp)->data.fixnum;
   long int count = 0;
@@ -270,6 +296,57 @@ object *make_vector(object *exp) {
   return obj;
 }
 
+object *make_vector_from_vector(object *vec, int start, int end) {
+  object *obj;
+  long int count = 0;
+
+  if (vec->data.vector.length == 0) {
+    return make_vector_from_list(the_empty_list);
+  }
+
+  obj = alloc_object();
+  obj->type = VECTOR;
+  obj->data.vector.length = end - start;
+  obj->data.vector.vec = malloc(end-start);
+  if (obj->data.vector.vec == NULL) {
+    error("out of memory\n");
+  }
+  
+  while (start < end) {
+    obj->data.vector.vec[count] = vec->data.vector.vec[start];
+    start += 1;
+    count += 1;
+  }
+  
+  return obj;
+}
+
+object *make_vector_from_string(object *str, int start, int end) {
+  object *obj;
+  long int count = 0;
+
+  if (h_emptyp(str) == True) {
+    return make_vector_from_list(the_empty_list);
+  }
+
+  obj = alloc_object();
+  obj->type = VECTOR;
+  obj->data.vector.length = end - start;
+  obj->data.vector.vec = malloc(end-start);
+  if (obj->data.vector.vec == NULL) {
+    error("out of memory\n");
+  }
+  
+  while (start < end) {
+    //printf("%c\n", str->data.string[start]);
+    write(make_character(str->data.string[start])); printf("\n");
+    obj->data.vector.vec[count] = make_character(str->data.string[start]);
+    start += 1;
+    count += 1;
+  }
+  
+  return obj;
+}
 
 /* SYMBOLs
 **************************************/
@@ -1219,10 +1296,15 @@ tailcall:
   else if (is_primitive_syntax(exp, list_symbol)) {
     return h_list(cdr(exp), env);
   }
+  
+  /**  string  **/
+  else if (is_primitive_syntax(exp, string_symbol)) {
+    return h_string(cdr(exp), env);
+  }
 
   /**  vector  **/
   else if (is_primitive_syntax(exp, vector_symbol)) {
-    return h_vector(exp, env);
+    return h_vector(cdr(exp), env);
   }
 
   /**  Application  **/
@@ -1297,13 +1379,15 @@ void write_vector(object *vec) {
   long int count = 0;
   long int len = vec->data.vector.length - 1;
   
-  while (count < len) {
+  if (vec->data.vector.length != 0) {
+    while (count < len) {
+      write(vec->data.vector.vec[count]);
+      printf(" ");
+      count += 1;
+    }
+    // If last element printed in while loop it would display as #(1 2 3 )
     write(vec->data.vector.vec[count]);
-    printf(" ");
-    count += 1;
   }
-  // If last element printed in while loop it would display as #(1 2 3 )
-  write(vec->data.vector.vec[count]);
 }
 
 
@@ -2181,7 +2265,8 @@ object *h_rest(object *seq) {
       return make_string(&seq->data.string[1]);
       break;
     case VECTOR:
-      error("rest on vectors not implemented yet");
+      return make_vector_from_vector(seq, 1, seq->data.vector.length);
+      //error("rest on vectors not implemented yet");
       break;
     default:
       error("Unsupported type for rest");
@@ -2503,14 +2588,38 @@ object *p_list(object *exp) {
 //  string
 
 object *h_string(object *exp, object *env) {
-  error("String constructor not implemented yet");
+  if (car(exp) == from_symbol) {
+    return make_string_from_list(h_list_from(cdr(exp), env));
+  }
+  else if (car(exp) == for_symbol) {
+    return make_string_from_list(h_list_for(cdr(exp), env));
+  }
+  else {
+    make_string_from_list(list_of_values(exp, env));
+  }
+}
+
+object *p_string(object *exp) {
+  error("string dummy procedure should not execute!");
 }
 
 
 //  vector
 
 object *h_vector(object *exp, object *env) {
-  make_vector(list_of_values(cdr(exp), env));
+  if (car(exp) == from_symbol) {
+    return make_vector_from_list(h_list_from(cdr(exp), env));
+  }
+  else if (car(exp) == for_symbol) {
+    return make_vector_from_list(h_list_for(cdr(exp), env));
+  }
+  else {
+    make_vector_from_list(list_of_values(exp, env));
+  }
+}
+
+object *p_vector(object *exp) {
+  error("vector dummy procedure should not execute!");
 }
 
 
@@ -2600,6 +2709,8 @@ void populate_initial_environment(object *env) {
   
   // Constructor Dummy Procedures
   add_procedure("list",     p_list);
+  add_procedure("string",   p_string);
+  add_procedure("vector",   p_vector);
 }
 
 
@@ -2651,6 +2762,7 @@ void init(void) {
   from_symbol         = make_symbol("from");
   list_symbol         = make_symbol("list");
   vector_symbol       = make_symbol("vector");
+  string_symbol       = make_symbol("string");
   
   define_macro_symbol = make_symbol("define-macro");
   test_symbol         = make_symbol("test");
