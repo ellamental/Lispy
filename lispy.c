@@ -2331,9 +2331,17 @@ object *p_rest(object *arguments) {
 //  next
 
 object *h_next(object *seq) {
+  object *temp;
   switch (seq->type) {
     case PAIR:
-      return cadr(seq);
+      temp = car(seq);
+      if (cdr(seq) == the_empty_list) {
+        seq->type = THE_EMPTY_LIST;
+        return temp;
+      }
+      seq->data.pair.car = cadr(seq);
+      seq->data.pair.cdr = cddr(seq);
+      return temp;
     case STRING:
       error("next not implemented on strings");
       break;
@@ -2341,6 +2349,9 @@ object *h_next(object *seq) {
       error("next not implemented on vectors");
       break;
     default:
+      if (h_emptyp(seq) == True) {
+        return seq;
+      }
       error("Unsupported type for rest");
       break;
   }
