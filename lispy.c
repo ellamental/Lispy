@@ -1968,9 +1968,30 @@ object *h_greater_than(object *obj_1, object *obj_2) {
   }
 
   else if (obj_1->type == PAIR) {
-    error("> on pairs not implemented yet");
+    if (h_length(obj_1)->data.fixnum == h_length(obj_2)->data.fixnum) {
+      while (obj_1 != the_empty_list) {
+        if (h_equalp(car(obj_1), car(obj_2)) == True) {
+          obj_1 = cdr(obj_1);
+          obj_2 = cdr(obj_2);
+        }
+        else if (h_greater_than(car(obj_1), car(obj_2)) == True) {
+          return True;
+        }
+        else {
+          return False;
+        }
+      }
+      return False;
+    }
+    
+    else if (h_length(obj_1)->data.fixnum > h_length(obj_2)->data.fixnum) {
+      return True;
+    }
+    else {
+      return False;
+    }
   }
-  
+
   else if (obj_1->type == VECTOR) {
     error("> on vectors not implemented yet");
   }
@@ -2023,7 +2044,28 @@ object *h_less_than(object *obj_1, object *obj_2) {
   }
   
   else if (obj_1->type == PAIR) {
-    error("< on pairs not implemented yet");
+    if (h_length(obj_1)->data.fixnum == h_length(obj_2)->data.fixnum) {
+      while (obj_1 != the_empty_list) {
+        if (h_equalp(car(obj_1), car(obj_2)) == True) {
+          obj_1 = cdr(obj_1);
+          obj_2 = cdr(obj_2);
+        }
+        else if (h_less_than(car(obj_1), car(obj_2)) == True) {
+          return True;
+        }
+        else {
+          return False;
+        }
+      }
+      return False;
+    }
+    
+    else if (h_length(obj_1)->data.fixnum < h_length(obj_2)->data.fixnum) {
+      return True;
+    }
+    else {
+      return False;
+    }
   }
 
   else if (obj_1->type == VECTOR) {
