@@ -2533,17 +2533,24 @@ object *p_time(object *arguments) {
 //_____________________________________________//
 
 
-object *make_application(object *test, object *arg) {
+object *apply_loop_body(object *test, object *arg) {
   return cons(test, cons(arg, the_empty_list));
 }
 
-object *make_expression(object *exp, object *var) {
-  if ((is_pair(exp) && !is_lambda(exp)) || (var == exp)) {
-    return make_lambda(cons(var, the_empty_list), 
-                       cons(exp, the_empty_list));
+object *make_loop_body(object *exp, object *var) {
+  if (cdr(exp) == the_empty_list) {
+    exp = car(exp);
+    if ((is_pair(exp) && !is_lambda(exp)) || (var == exp)) {
+      return make_lambda(cons(var, the_empty_list), 
+                         cons(exp, the_empty_list));
+    }
+    else {
+      return exp;
+    }
   }
   else {
-    return exp;
+    return make_lambda(cons(var, the_empty_list),
+                       exp);
   }
 }
 
@@ -2553,11 +2560,11 @@ object *make_expression(object *exp, object *var) {
 object *h_for(object *exp, object *env) {
   object *var = car(exp);
   object *seq = eval(caddr(exp), env);
-  object *expression = make_expression(cadddr(exp), var);
+  object *expression = make_loop_body(cdddr(exp), var);
   object *result;
   
   while (h_emptyp(seq) != True) {
-    result = eval(make_application(expression, h_first(seq)), env);
+    result = eval(apply_loop_body(expression, h_first(seq)), env);
     seq = h_rest(seq);
   }
   return result;
@@ -2569,17 +2576,19 @@ object *h_for(object *exp, object *env) {
 object *h_list_for(object *exp, object *env) {
   object *result_list = the_empty_list;
   object *var = car(exp);
-  object *seq = eval(caddr(exp), env);
+  exp = cddr(exp);
+  object *seq = eval(car(exp), env);
+  exp = cdr(exp);
   object *expression;
   object *test;
     
   // (list for ii in sequence if test expression)
-  if (cadddr(exp) == if_symbol) {
-    test = make_expression(caddddr(exp), var);
-    expression = make_expression(cadddddr(exp), var);
+  if (car(exp) == if_symbol) {
+    test = make_loop_body(cons(cadr(exp), the_empty_list), var);
+    expression = make_loop_body(cddr(exp), var);
     while (h_emptyp(seq) != True) {
-      if (eval(make_application(test, h_first(seq)), env) == True) {
-        result_list = cons(eval(make_application(expression, h_first(seq)), env), 
+      if (eval(apply_loop_body(test, h_first(seq)), env) == True) {
+        result_list = cons(eval(apply_loop_body(expression, h_first(seq)), env), 
                            result_list);
         seq = h_rest(seq);
       }
@@ -2592,9 +2601,9 @@ object *h_list_for(object *exp, object *env) {
 
   // (list for ii in sequence expression)
   else {
-    expression = make_expression(cadddr(exp), var);
+    expression = make_loop_body(exp, var);
     while (h_emptyp(seq) != True) {
-      result_list = cons(eval(make_application(expression, h_first(seq)), env), 
+      result_list = cons(eval(apply_loop_body(expression, h_first(seq)), env), 
                           result_list);
       seq = h_rest(seq);
     }
@@ -2620,7 +2629,7 @@ object *h_list_from(object *exp, object *env) {
   else {
     test = caddr(exp);
     while (h_emptyp(seq) != True) {
-      if (eval(make_application(test, h_first(seq)), env) == True) {
+      if (eval(apply_loop_body(test, h_first(seq)), env) == True) {
         result_list = cons(h_first(seq), result_list);
         seq = h_rest(seq);
       }
