@@ -129,6 +129,8 @@ object *h_vector(object *exp, object *env);
 object *h_length(object *obj);
 object *h_list(object *exp, object *env);
 object *h_string(object *exp, object *env);
+object *h_for(object *exp, object *env);
+
 object *h_emptyp(object *obj);
 
 
@@ -1305,6 +1307,11 @@ tailcall:
   /**  vector  **/
   else if (is_primitive_syntax(exp, vector_symbol)) {
     return h_vector(cdr(exp), env);
+  }
+
+  /**  for  **/
+  else if (is_primitive_syntax(exp, for_symbol)) {
+    return h_for(cdr(exp), env);
   }
 
   /**  Application  **/
@@ -2539,6 +2546,23 @@ object *make_expression(object *exp, object *var) {
     return exp;
   }
 }
+
+
+//  for
+
+object *h_for(object *exp, object *env) {
+  object *var = car(exp);
+  object *seq = eval(caddr(exp), env);
+  object *expression = make_expression(cadddr(exp), var);
+  object *result;
+  
+  while (h_emptyp(seq) != True) {
+    result = eval(make_application(expression, h_first(seq)), env);
+    seq = h_rest(seq);
+  }
+  return result;
+}
+
 
 //  list
 
