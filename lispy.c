@@ -2328,6 +2328,29 @@ object *p_rest(object *arguments) {
 }
 
 
+//  next
+
+object *h_next(object *seq) {
+  switch (seq->type) {
+    case PAIR:
+      return cadr(seq);
+    case STRING:
+      error("next not implemented on strings");
+      break;
+    case VECTOR:
+      error("next not implemented on vectors");
+      break;
+    default:
+      error("Unsupported type for rest");
+      break;
+  }
+}
+
+object *p_next(object *args) {
+  return h_next(car(args));
+}
+
+
 //  empty?
 
 object *h_emptyp(object *obj) {
@@ -2770,6 +2793,7 @@ void populate_initial_environment(object *env) {
   // Sequence Procedures
   add_procedure("first",    p_first);
   add_procedure("rest",     p_rest);
+  add_procedure("next",     p_next);
   add_procedure("empty?",   p_emptyp);
   add_procedure("length",   p_length);
   add_procedure("index",    p_index);
