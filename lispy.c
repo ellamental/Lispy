@@ -2902,7 +2902,7 @@ void REPL(void) {
 int main(void) {
 
   printf("****************************************\n"
-         "**           Basic Scheme             **\n"
+         "**              Lispy                 **\n"
          "**           Version 0.01             **\n"
          "**                                    **\n"
          "** Use ctrl-c to exit                 **\n"
