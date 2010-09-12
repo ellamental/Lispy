@@ -20,6 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <sys/time.h>
 
 // Report Error and restart REPL
 void REPL(void);
@@ -48,6 +49,7 @@ typedef enum {
 
 typedef struct object {
   object_type type;
+  //int refcount;
   union {
     long int fixnum;
     double   flonum;
@@ -146,9 +148,22 @@ object *alloc_object(void) {
   if (obj == NULL) {
     error("out of memory\n");
   }
+  //obj->refcount = 1;
   return obj;
 }
 
+/*
+void *inc_ref(object *obj) {
+  obj->refcount += 1;
+}
+
+void *dec_ref(object *obj) {
+  obj->refcount -= 1;
+  if (obj->refcount <= 0) {
+    free(obj);
+  }
+}
+*/
 
 /** ***************************************************************************
 **                          Data Type Constructors
@@ -919,10 +934,6 @@ char is_quoted(object *expression) {
   return is_primitive_syntax(expression, quote_symbol);
 }
 
-object *text_of_quotation(object *exp) {
-  return cadr(exp);
-}
-
 object *quote_macro_arguments(object *exp) {
   return cons(quote_symbol, 
               cons(exp, 
@@ -1157,204 +1168,157 @@ object *eval(object *exp, object *env) {
 
 tailcall:
 
-  /**  Self-Evaluating  **/
-  if (is_self_evaluating(exp)) {
-    return exp;
-  }
-
-  /**  Symbol  **/
-  else if (is_symbol(exp)) {
-    return lookup_variable_value(exp, env);
-  }
-
-  /**  quote  **/
-  else if (is_quoted(exp)) {
-    return text_of_quotation(exp);
-  }
-
-  /**  set!  **/
-  else if (is_assignment(exp)) {
-    set_variable_value(assignment_variable(exp),
-                       eval(assignment_value(exp), env),
-                       env);
-    return Void;
-  }
-
-  /**  define  **/
-  else if (is_definition(exp)) {
-    define_variable(definition_variable(exp),
-                    eval(definition_value(exp), env),
-                    env);
-    return Void;
-  }
-
-  /**  if  **/
-  else if (is_if(exp)) {
-    exp = is_true(eval(cadr(exp), env)) ?
-            caddr(exp) :
-            // Handle (if test consequent else alternative)
-            (cadddr(exp) == else_symbol) ?
-              caddddr(exp) :
-              cadddr(exp);
-    goto tailcall;
-  }
-
-  /**  cond  **/
-  else if (is_primitive_syntax(exp, cond_symbol)) {
-    exp = make_cond(cdr(exp));
-    goto tailcall;
-  }
-
-  /**  lambda  **/
-  else if (is_lambda(exp)) {
-    // Check for presence of a docstring
-    if (caddr(exp)->type == STRING) {
-      return make_compound_procedure(cadr(exp), cdddr(exp), env, caddr(exp));
-    }
-    else {
-      return make_compound_procedure(cadr(exp), cddr(exp), env, make_string("No docstring"));
-    }
-  }
-
-
-  /**  begin  **/
-  else if (is_primitive_syntax(exp, begin_symbol)) {
-    exp = cdr(exp);
-    while (!is_last_exp(exp)) {
-      eval(car(exp), env);
-      exp = cdr(exp);
-    }
-    exp = car(exp);
-    goto tailcall;
-  }
-  
-  /**  let  **/
-  else if (is_primitive_syntax(exp, let_symbol)) {
-    exp = make_let(cdr(exp));
-    goto tailcall;
-  }
-  
-  /**  and  **/
-  else if (is_primitive_syntax(exp, and_symbol)) {
-    exp = cdr(exp);
-    while (!is_last_exp(exp)) {
-      if (eval(car(exp), env) != False) {
-        exp = cdr(exp);
+  switch (exp->type) {
+    case BOOLEAN:
+    case FIXNUM:
+    case FLONUM:
+    case CHARACTER:
+    case STRING:
+    case VOID:
+      return exp;
+    case SYMBOL:
+      return lookup_variable_value(exp, env);
+    case PAIR:
+      procedure = car(exp);
+      
+      if (procedure == quote_symbol) {
+        return cadr(exp);
       }
-      else {
+      else if (procedure == set_symbol) {
+        set_variable_value(assignment_variable(exp),
+                           eval(assignment_value(exp), env),
+                           env);
+        return Void;
+
+      }
+      else if (procedure == define_symbol) {
+        define_variable(definition_variable(exp),
+                        eval(definition_value(exp), env),
+                        env);
+        return Void;
+      }
+      else if (procedure == if_symbol) {
+        exp = is_true(eval(cadr(exp), env)) ?
+                caddr(exp) :
+                // Handle (if test consequent else alternative)
+                (cadddr(exp) == else_symbol) ?
+                  caddddr(exp) :
+                  cadddr(exp);
+        goto tailcall;
+      }
+      else if (procedure == cond_symbol) {
+        exp = make_cond(cdr(exp));
+        goto tailcall;
+      }
+      else if (procedure == lambda_symbol) {
+        // Check for presence of a docstring
+        if (caddr(exp)->type == STRING) {
+          return make_compound_procedure(cadr(exp), cdddr(exp), env, caddr(exp));
+        }
+        else {
+          return make_compound_procedure(cadr(exp), cddr(exp), env, make_string("No docstring"));
+        }
+      }
+      else if (procedure == begin_symbol) {
+        exp = cdr(exp);
+        while (!is_last_exp(exp)) {
+          eval(car(exp), env);
+          exp = cdr(exp);
+        }
+        exp = car(exp);
+        goto tailcall;
+      }
+      else if (procedure == let_symbol) {
+        exp = make_let(cdr(exp));
+        goto tailcall;
+      }
+      else if (procedure == and_symbol) {
+        exp = cdr(exp);
+        while (!is_last_exp(exp)) {
+          if (eval(car(exp), env) != False) {
+            exp = cdr(exp);
+          }
+          else {
+            return False;
+          }
+        }
+        return car(exp);
+      }
+      else if (procedure == or_symbol) {
+        object *result;
+        exp = cdr(exp);
+        while (exp != the_empty_list) {
+          result = eval(car(exp), env);
+          if (result == False) {
+            exp = cdr(exp);
+          }
+          else {
+            return result;
+          }
+        }
         return False;
       }
-    }
-    return car(exp);
-  }
-  
-  /**  or  **/
-  else if (is_primitive_syntax(exp, or_symbol)) {
-    object *result;
-    exp = cdr(exp);
-    while (exp != the_empty_list) {
-      result = eval(car(exp), env);
-      if (result == False) {
-        exp = cdr(exp);
+      else if (procedure == apply_symbol) {
+        exp = cons(cadr(exp), eval(caddr(exp), env));
+        goto tailcall;
+      }
+      else if (procedure == eval_symbol) {
+        if (cddr(exp) != the_empty_list) {
+          env = eval(caddr(exp), env);
+          exp = eval(cadr(exp), env);
+          goto tailcall;
+        }
+        else {
+          exp = eval(cadr(exp), env);
+          goto tailcall;
+        }
+      }
+      else if (procedure == define_macro_symbol) {
+        define_variable(cadr(exp), make_macro(caddr(exp)), env);
+        return Void;
+        
+      }
+      else if (procedure == test_symbol) {
+        return test(cdr(exp));
+        
+      }
+      else if (procedure == list_symbol) {
+        return h_list(cdr(exp), env);
+      }
+      else if (procedure == string_symbol) {
+        return h_string(cdr(exp), env);
+      }
+      else if (procedure == vector_symbol) {
+        return h_vector(cdr(exp), env);
+      }
+      else if (procedure == for_symbol) {
+        return h_for(cdr(exp), env);
       }
       else {
-        return result;
+        procedure = eval(procedure, env);
+        switch (procedure->type) {
+          case PRIMITIVE_PROCEDURE:
+            return (procedure->data.primitive_procedure.fn)(list_of_values(cdr(exp), env));
+          case COMPOUND_PROCEDURE:
+            env = extend_environment(procedure->data.compound_procedure.parameters,
+                                    eval_arguments(cdr(exp), env, procedure->data.compound_procedure.parameters),
+                                    procedure->data.compound_procedure.env);
+            
+            // Transform lambda body into begin form
+            exp = cons(begin_symbol, procedure->data.compound_procedure.body);
+            goto tailcall;
+            break;
+          case MACRO:
+            // Expand macro by passing the arguments to the transformer unevaluated
+            exp =  eval(cons(procedure->data.macro.transformer, 
+                            cons(quote_macro_arguments(cdr(exp)),
+                                  the_empty_list)),
+                        env);
+            goto tailcall;
+            break;
+        }
       }
-    }
-    return False;
   }
-  
-  /**  apply  **/
-  else if (is_primitive_syntax(exp, apply_symbol)) {
-    exp = cons(cadr(exp), eval(caddr(exp), env));
-    goto tailcall;
-  }
-  
-  /**  eval  **/
-  else if (is_primitive_syntax(exp, eval_symbol)) {
-    if (cddr(exp) != the_empty_list) {
-      env = eval(caddr(exp), env);
-      exp = eval(cadr(exp), env);
-      goto tailcall;
-    }
-    else {
-      exp = eval(cadr(exp), env);
-      goto tailcall;
-    }
-  }
-
-  /**  define-macro  **/
-  else if (is_primitive_syntax(exp, define_macro_symbol)) {
-    define_variable(cadr(exp), make_macro(caddr(exp)), env);
-    return Void;
-  }
-
-  /**  test  **/
-  else if (is_primitive_syntax(exp, test_symbol)) {
-    return test(cdr(exp));
-  }
-  
-  /**  list  **/
-  else if (is_primitive_syntax(exp, list_symbol)) {
-    return h_list(cdr(exp), env);
-  }
-  
-  /**  string  **/
-  else if (is_primitive_syntax(exp, string_symbol)) {
-    return h_string(cdr(exp), env);
-  }
-
-  /**  vector  **/
-  else if (is_primitive_syntax(exp, vector_symbol)) {
-    return h_vector(cdr(exp), env);
-  }
-
-  /**  for  **/
-  else if (is_primitive_syntax(exp, for_symbol)) {
-    return h_for(cdr(exp), env);
-  }
-
-  /**  Application  **/
-  else if (is_application(exp)) {
-    procedure = eval(car(exp), env);
-    
-    /**  Primitive  **/
-    if (is_primitive_procedure(procedure)) {
-      return (procedure->data.primitive_procedure.fn)(list_of_values(cdr(exp), env));
-    }
-    
-    /**  Compound  **/
-    else if (is_compound_procedure(procedure)) {
-      env = extend_environment(procedure->data.compound_procedure.parameters,
-                               eval_arguments(cdr(exp), env, procedure->data.compound_procedure.parameters),
-                               procedure->data.compound_procedure.env);
-      
-      // Transform lambda body into begin form
-      exp = cons(begin_symbol, procedure->data.compound_procedure.body);
-      goto tailcall;
-    }
-    
-    /**  Macro  **/ 
-    else if (is_macro(procedure)) {
-      // Expand macro by passing the arguments to the transformer unevaluated
-      exp =  eval(cons(procedure->data.macro.transformer, 
-                       cons(quote_macro_arguments(cdr(exp)),
-                            the_empty_list)),
-                  env);
-      goto tailcall;
-    }
-    
-    else {
-      error("Unknown procedure type\n");
-    }
-  }
-  
-  else {
-    error("cannot eval unknown expression");
-    exit(1);
-  }
-  
-  error("eval illegal state\n");
 }
 
 
@@ -1385,7 +1349,6 @@ void write_pair(object *pair) {
 void write_vector(object *vec) {
   long int count = 0;
   long int len = vec->data.vector.length - 1;
-  
   if (vec->data.vector.length != 0) {
     while (count < len) {
       write(vec->data.vector.vec[count]);
@@ -1532,6 +1495,7 @@ object *p_empty_environment(object *arguments) {
 
 //  display
 
+// BUG: Trying to write vector of length > 3 results in a seg fault
 object *p_display(object *arguments) {
   while (!is_the_empty_list(arguments)) {
     object *obj;
@@ -2562,6 +2526,21 @@ object *p_time(object *arguments) {
   return make_fixnum(time(NULL));
 }
 
+//  sleep
+
+object *p_sleep(object *arguments) {
+  sleep(car(arguments)->data.fixnum);
+  return Void;
+}
+
+//  m-seconds
+
+object *p_m_seconds(object *arguments) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return make_flonum(tv.tv_sec + (tv.tv_usec / 1000000.0));
+}
+
 
 //  Sequence Constructors / Comprehensions
 //_____________________________________________//
@@ -2732,6 +2711,25 @@ object *p_vector(object *exp) {
 }
 
 
+object *p_range(object *args) {
+  int stop;
+  int start;
+  object *result = the_empty_list;
+  if (cdr(args) != the_empty_list) {
+    start = car(args)->data.fixnum;
+    stop = cadr(args)->data.fixnum;
+  }
+  else {
+    start = 0;
+    stop = car(args)->data.fixnum;
+  }
+  while (stop--, stop >= start) {
+    result = cons(make_fixnum(stop), result);
+  }
+  return result;
+}
+
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -2793,34 +2791,38 @@ void populate_initial_environment(object *env) {
 
   
   // Type Procedures
-  add_procedure("type",     p_type);
-  add_procedure("type?",    p_typep);
+  add_procedure("type",      p_type);
+  add_procedure("type?",     p_typep);
   
-  add_procedure("->string", p_to_string);
-  add_procedure("->number", p_to_number);
-  add_procedure("->char",   p_to_char);
+  add_procedure("->string",  p_to_string);
+  add_procedure("->number",  p_to_number);
+  add_procedure("->char",    p_to_char);
  
   
   // Sequence Procedures
-  add_procedure("first",    p_first);
-  add_procedure("rest",     p_rest);
-  add_procedure("next",     p_next);
-  add_procedure("empty?",   p_emptyp);
-  add_procedure("length",   p_length);
-  add_procedure("index",    p_index);
+  add_procedure("first",     p_first);
+  add_procedure("rest",      p_rest);
+  add_procedure("next",      p_next);
+  add_procedure("empty?",    p_emptyp);
+  add_procedure("length",    p_length);
+  add_procedure("index",     p_index);
+  add_procedure("range",     p_range);
 
   
   // Meta-data Procedures
-  add_procedure("doc",      p_doc);
+  add_procedure("doc",       p_doc);
   
 
-  // System Procedures
-  add_procedure("time",     p_time);
+  // Time Procedures
+  add_procedure("time",      p_time);
+  add_procedure("clock",     p_clock);
+  add_procedure("sleep",     p_sleep);
+  add_procedure("m-seconds", p_m_seconds);
   
   // Constructor Dummy Procedures
-  add_procedure("list",     p_list);
-  add_procedure("string",   p_string);
-  add_procedure("vector",   p_vector);
+  add_procedure("list",      p_list);
+  add_procedure("string",    p_string);
+  add_procedure("vector",    p_vector);
 }
 
 

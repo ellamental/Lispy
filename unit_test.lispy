@@ -1055,6 +1055,19 @@
 ;;   >>> 1
 ;; )
 
+;;  time test
+;;_________________________;;
+
+;; (define (time-it)
+;;   (define (loop x y)
+;;     (if (> x y) (print "complete")
+;;                 (begin
+;;                   (+ x 10)
+;;                   ;;(list for ii in (range 50) (+ ii 5))
+;;                   (loop (+ x 1) y))))
+;;   (define start (m-seconds))
+;;   (loop 0 1000000)
+;;   (- (m-seconds) start))
 
 ;;  
 ;;_________________________;;
