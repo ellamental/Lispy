@@ -14,6 +14,7 @@
 ** Refactor and fix bug in 'index'
 ** Add Garbage Collection (probably reference counting)
 ******************************************************************************/
+#include <gc/gc.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +22,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
-
+ 
 // Report Error and restart REPL
 void REPL(void);
 #define error(args...) fprintf(stderr, args); printf("\n"); REPL()
@@ -33,15 +34,19 @@ void REPL(void);
 
 typedef enum {
   // Self-Evaluating Types
+//   0       1       2         3          4
   BOOLEAN, VOID, CHARACTER, SYMBOL, THE_EMPTY_LIST,
 
   // Procedures and Macros
+//         5                   6             7
   PRIMITIVE_PROCEDURE, COMPOUND_PROCEDURE, MACRO,
 
   // Numeric Tower
+//   8       9
   FIXNUM, FLONUM,
 
   // Sequences
+//  10     11     12
   STRING, PAIR, VECTOR
 
 } object_type;
@@ -49,7 +54,7 @@ typedef enum {
 
 typedef struct object {
   object_type type;
-  //int refcount;
+  int refcount;
   union {
     long int fixnum;
     double   flonum;
@@ -137,33 +142,21 @@ object *h_emptyp(object *obj);
 
 
 
-/* Object Allocation
-**************************************/
 
-/* no GC so truely "unlimited extent" */
+//  Object Allocation and Deallocation
+//___________________________________//
+
 object *alloc_object(void) {
   object *obj;
 
-  obj = malloc(sizeof(object));
+  obj = GC_MALLOC(sizeof(object));
   if (obj == NULL) {
-    error("out of memory\n");
+    error("Out of memory\n");
   }
-  //obj->refcount = 1;
   return obj;
 }
 
-/*
-void *inc_ref(object *obj) {
-  obj->refcount += 1;
-}
 
-void *dec_ref(object *obj) {
-  obj->refcount -= 1;
-  if (obj->refcount <= 0) {
-    free(obj);
-  }
-}
-*/
 
 /** ***************************************************************************
 **                          Data Type Constructors
@@ -252,7 +245,7 @@ object *make_string(char *value) {
   
   obj = alloc_object();
   obj->type = STRING;
-  obj->data.string = malloc(strlen(value) + 1);
+  obj->data.string = GC_MALLOC(strlen(value) + 1);
   if (obj->data.string == NULL) {
     error("out of memory\n");
   }
@@ -266,7 +259,7 @@ object *make_string_from_list(object *exp) {
   
   obj = alloc_object();
   obj->type = STRING;
-  obj->data.string = malloc(h_length(exp)->data.fixnum + 1);
+  obj->data.string = GC_MALLOC(h_length(exp)->data.fixnum + 1);
   if (obj->data.string == NULL) {
     error("out of memory");
   }
@@ -299,7 +292,7 @@ object *make_vector_from_list(object *exp) {
   obj = alloc_object();
   obj->type = VECTOR;
   obj->data.vector.length = len;
-  obj->data.vector.vec = malloc(len);
+  obj->data.vector.vec = GC_MALLOC(len);
   if (obj->data.vector.vec == NULL) {
     error("out of memory\n");
   }
@@ -324,7 +317,7 @@ object *make_vector_from_vector(object *vec, int start, int end) {
   obj = alloc_object();
   obj->type = VECTOR;
   obj->data.vector.length = end - start;
-  obj->data.vector.vec = malloc(end-start);
+  obj->data.vector.vec = GC_MALLOC(end-start);
   if (obj->data.vector.vec == NULL) {
     error("out of memory\n");
   }
@@ -349,7 +342,7 @@ object *make_vector_from_string(object *str, int start, int end) {
   obj = alloc_object();
   obj->type = VECTOR;
   obj->data.vector.length = end - start;
-  obj->data.vector.vec = malloc(end-start);
+  obj->data.vector.vec = GC_MALLOC(end-start);
   if (obj->data.vector.vec == NULL) {
     error("out of memory\n");
   }
@@ -384,7 +377,7 @@ object *make_symbol(char *value) {
   // create a symbol and add it to symbol_table
   obj = alloc_object();
   obj->type = SYMBOL;
-  obj->data.symbol = malloc(strlen(value) + 1);
+  obj->data.symbol = GC_MALLOC(strlen(value) + 1);
   if (obj->data.symbol == NULL) {
     error("out of memory\n");
   }
@@ -769,7 +762,7 @@ object *read_number(FILE *in) {
 /* Read
 **************************************/
 
-object *read(FILE *in);
+object *lispy_read(FILE *in);
 
 object *read_pair(FILE *in) {
   int c;
@@ -784,7 +777,7 @@ object *read_pair(FILE *in) {
   }
   ungetc(c, in);
   
-  car_obj = read(in);
+  car_obj = lispy_read(in);
   
   remove_whitespace(in);
 
@@ -793,7 +786,7 @@ object *read_pair(FILE *in) {
 }
 
 
-object *read(FILE *in) {
+object *lispy_read(FILE *in) {
   int c;                         /* Character from input               */
   int i;                         /* Counter for strings                */
   #define BUFFER_MAX 1000        /* Maximum length for string/symbols  */
@@ -820,7 +813,7 @@ object *read(FILE *in) {
         return read_character(in);
       case '(':
         ungetc(c, in);
-        return cons(vector_symbol, read(in));
+        return cons(vector_symbol, lispy_read(in));
       default:
         error("Unrecognized syntax");
     }
@@ -879,7 +872,7 @@ object *read(FILE *in) {
   
   /* Quote */
   else if (c == '\'') {
-    return cons(quote_symbol, cons(read(in), the_empty_list));
+    return cons(quote_symbol, cons(lispy_read(in), the_empty_list));
   }
 
   /* EOF */
@@ -1540,7 +1533,7 @@ object *p_load(object *arguments) {
   if (in == NULL) {
     error("could not load file \"%s\"", filename);
   }
-  while ((exp = read(in)) != NULL) {
+  while ((exp = lispy_read(in)) != NULL) {
     result = eval(exp, the_global_environment);
   }
   fclose(in);
@@ -1700,13 +1693,18 @@ object *h_equalp(object *obj_1, object *obj_2) {
       }
       return True;
 
+    //BUG: Equal vectors do not compare equal.
     case VECTOR:
+      printf("Count: %i\n", count);
       if (obj_1->data.vector.length != obj_2->data.vector.length) {
         return False;
       }
       while (count < obj_1->data.vector.length) {
         if (h_equalp(obj_1->data.vector.vec[count],
                      obj_2->data.vector.vec[count]) == False) {
+          //printf("Vector index %i not equal\n", count);
+          printf("Vector 1: "); write(obj_1->data.vector.vec[count]); printf("\n");
+          printf("Vector 2: "); write(obj_2->data.vector.vec[count]); printf("\n");
           return False;
         }
         count += 1;
@@ -2730,6 +2728,12 @@ object *p_range(object *args) {
 }
 
 
+object *p_refcount(object *args) {
+  int c = car(args)->refcount;
+  printf("Refcount: %i\n", c);
+  return Void;
+}
+
 /** ***************************************************************************
 **                                   REPL
 ******************************************************************************/
@@ -2815,7 +2819,6 @@ void populate_initial_environment(object *env) {
 
   // Time Procedures
   add_procedure("time",      p_time);
-  add_procedure("clock",     p_clock);
   add_procedure("sleep",     p_sleep);
   add_procedure("m-seconds", p_m_seconds);
   
@@ -2823,6 +2826,8 @@ void populate_initial_environment(object *env) {
   add_procedure("list",      p_list);
   add_procedure("string",    p_string);
   add_procedure("vector",    p_vector);
+  
+  add_procedure("refcount",  p_refcount);
 }
 
 
@@ -2892,7 +2897,7 @@ void REPL(void) {
   
   while (1) {
     printf("> ");
-    input = read(stdin);
+    input = lispy_read(stdin);
     output = eval(input, the_global_environment);
     if (output != Void) {
       write(output);
@@ -2903,6 +2908,8 @@ void REPL(void) {
 
 int main(void) {
 
+  GC_INIT();
+  
   printf("****************************************\n"
          "**              Lispy                 **\n"
          "**           Version 0.01             **\n"
@@ -2913,11 +2920,9 @@ int main(void) {
   init();
   
   // Load and run unit tests
-  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.lispy"),
-              the_empty_list));
+  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.lispy"), the_empty_list));
   
   REPL();
   
   return 0;
 }
-
