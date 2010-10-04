@@ -142,7 +142,7 @@ object *h_emptyp(object *obj);
 
 
 
-//  Object Allocation and Deallocation
+//  Object Allocation
 //___________________________________//
 
 object *alloc_object(void) {
