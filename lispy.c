@@ -54,7 +54,6 @@ typedef enum {
 
 typedef struct object {
   object_type type;
-  int refcount;
   union {
     long int fixnum;
     double   flonum;
@@ -2728,11 +2727,6 @@ object *p_range(object *args) {
 }
 
 
-object *p_refcount(object *args) {
-  int c = car(args)->refcount;
-  printf("Refcount: %i\n", c);
-  return Void;
-}
 
 /** ***************************************************************************
 **                                   REPL
