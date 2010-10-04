@@ -12,7 +12,6 @@
 ** Refactor eval/read to use switch statement instead of if/else
 ** Add a new 'File' type and operations on it (read, write, open, close, etc.)
 ** Refactor and fix bug in 'index'
-** Add Garbage Collection (probably reference counting)
 ******************************************************************************/
 #include <gc/gc.h>
 
@@ -85,8 +84,8 @@ typedef struct object {
 } object;
 
 
-/* Initialize Variables
-**************************************/
+// Initialize Variables
+//___________________________________//
 
 object *the_empty_list;
 
@@ -123,8 +122,8 @@ object *string_symbol;
 object *the_global_environment;
 
 
-/* Function Prototypes
-****************************/
+// Function Prototypes
+//___________________________________//
 
 object *cons(object *car, object *cdr);
 object *car(object *pair);
@@ -162,16 +161,16 @@ object *alloc_object(void) {
 ******************************************************************************/
 
 
-/* The Empty List
-**************************************/
+// The Empty List
+//___________________________________//
 
 char is_the_empty_list(object *obj) {
   return obj == the_empty_list;
 }
 
 
-/* BOOLEANs
-**************************************/
+// BOOLEANs
+//___________________________________//
 char is_boolean(object *obj) {
   return obj->type == BOOLEAN;
 }
@@ -185,8 +184,8 @@ char is_true(object *obj) {
 }
 
 
-/* FIXNUMs
-**************************************/
+// FIXNUMs
+//___________________________________//
 
 object *make_fixnum(long value) {
   object *obj;
@@ -202,8 +201,8 @@ char is_fixnum(object *obj) {
 }
 
 
-/* FLONUMs
-**************************************/
+// FLONUMs
+//___________________________________//
 
 object *make_flonum(double value) {
   object *obj;
@@ -219,8 +218,8 @@ char is_flonum(object *obj) {
 }
 
 
-/* CHARACTERs
-**************************************/
+// CHARACTERs
+//___________________________________//
 
 object *make_character(char value) {
   object *obj;
@@ -236,8 +235,8 @@ char is_character(object *obj) {
 }
 
 
-/* STRINGs
-**************************************/
+// STRINGs
+//___________________________________//
 
 object *make_string(char *value) {
   object *obj;
@@ -280,8 +279,8 @@ char is_string(object *obj) {
 }
 
 
-/* VECTORs
-**************************************/
+// VECTORs
+//___________________________________//
 
 object *make_vector_from_list(object *exp) {
   object *obj;
@@ -357,8 +356,8 @@ object *make_vector_from_string(object *str, int start, int end) {
   return obj;
 }
 
-/* SYMBOLs
-**************************************/
+// SYMBOLs
+//___________________________________//
 
 object *make_symbol(char *value) {
   object *obj;
@@ -390,8 +389,8 @@ char is_symbol(object *obj) {
 }
 
 
-/* PAIRs
-**************************************/
+// PAIRs
+//___________________________________//
 
 object *cons(object *car, object *cdr) {
   object *obj;
@@ -456,8 +455,8 @@ object *set_cdr(object *obj, object* value) {
 #define caddddddr(obj) car(cdr(cdr(cdr(cdr(cdr(cdr(obj)))))))
 
 
-/* PRIMITIVE_PROCEDUREs
-**************************************/
+// PRIMITIVE_PROCEDUREs
+//___________________________________//
 
 object *make_primitive_procedure(object *(*fn) (struct object *arguments)) {
   object *obj;
@@ -473,8 +472,8 @@ char is_primitive_procedure(object *obj) {
 }
 
 
-/* COMPOUND_PROCEDUREs
-**************************************/
+// COMPOUND_PROCEDUREs
+//___________________________________//
 
 object *make_compound_procedure(object *parameters, object *arguments,
                                 object* env, object *docstring) {
@@ -496,8 +495,8 @@ char is_procedure(object *obj) {
   return obj->type == COMPOUND_PROCEDURE || obj->type == PRIMITIVE_PROCEDURE;
 }
 
-/* MACROs
-**************************************/
+// MACROs
+//___________________________________//
 
 object *make_macro(object *transformer) {
   object *obj;
@@ -515,8 +514,8 @@ char is_macro(object *obj) {
 **                             ENVIRONMENTs
 ******************************************************************************/
 
-/* Frames
-**************************************/
+// Frames
+//___________________________________//
 
 object *make_frame(object *variables, object *values) {
   return cons(variables, values);
@@ -536,8 +535,8 @@ void add_binding_to_frame(object *var, object *val, object *frame) {
 }
 
 
-/* Environments
-**************************************/
+// Environments
+//___________________________________//
 
 char is_the_empty_environment(object *env) {
   return env == the_empty_list;
@@ -556,8 +555,8 @@ object *extend_environment(object *vars, object *vals, object *base_env) {
 }
 
 
-/* Variables
-**************************************/
+// Variables
+//___________________________________//
 
 object *lookup_variable_value(object *var, object *env) {
   object *frame;
@@ -640,8 +639,8 @@ char is_initial(int c) {
 }
 
 
-/* Peek at Next Character
-**************************************/
+// Peek at Next Character
+//___________________________________//
 
 int peek(FILE *in) {
   int c;
@@ -658,8 +657,8 @@ void peek_expected_delimiter(FILE *in) {
 }
 
 
-/* Remove Whitespace
-**************************************/
+// Remove Whitespace
+//___________________________________//
 
 void remove_whitespace(FILE *in) {
   int c;
@@ -668,7 +667,7 @@ void remove_whitespace(FILE *in) {
     if (isspace(c)) {
       continue;
     }
-    else if (c == ';') { /* comments are whitespace also */
+    else if (c == ';') { // comments are whitespace also
       while (((c = getc(in)) != EOF) && (c != '\n'));
       continue;
     }
@@ -678,10 +677,10 @@ void remove_whitespace(FILE *in) {
 }
 
 
-/* Read Characters
-**************************************/
+// Read Characters
+//___________________________________//
 
-/* Read #\newline and #\space characters */
+// Read #\newline and #\space characters
 void read_expected_string(FILE *in, char *str) {
   int c;
   
@@ -704,7 +703,7 @@ object *read_character(FILE *in) {
   switch (c) {
     case EOF:
       error("incomplete character literal");
-    /* #\space */
+    // #\space
     case 's':
       if (peek(in) == 'p') {
         read_expected_string(in, "pace");
@@ -712,7 +711,7 @@ object *read_character(FILE *in) {
         return make_character(' ');
       }
       break;
-    /* #\newline */
+    // #\newline
     case 'n':
       if (peek(in) == 'e') {
         read_expected_string(in, "ewline");
@@ -732,7 +731,7 @@ object *read_number(FILE *in) {
   int count = 0;
   char buffer[30];
 
-  /* Read until delimiter and store in buffer */
+  // Read until delimiter and store in buffer
   while (c = getc(in), !is_delimiter(c)) {
     buffer[count] = c;
     count++;
@@ -758,8 +757,8 @@ object *read_number(FILE *in) {
   }
 }
 
-/* Read
-**************************************/
+// Read
+//___________________________________//
 
 object *lispy_read(FILE *in);
 
@@ -786,16 +785,16 @@ object *read_pair(FILE *in) {
 
 
 object *lispy_read(FILE *in) {
-  int c;                         /* Character from input               */
-  int i;                         /* Counter for strings                */
-  #define BUFFER_MAX 1000        /* Maximum length for string/symbols  */
-  char buffer[BUFFER_MAX + 1];   /* Buffer to hold strings/symbols     */
+  int c;                         // Character from input
+  int i;                         // Counter for strings
+  #define BUFFER_MAX 1000
+  char buffer[BUFFER_MAX + 1];   // Buffer to hold strings/symbols
 
   remove_whitespace(in);
 
   c = getc(in);
 
-  /* Numbers */
+  // Numbers
   if (isdigit(c) || (c == '-' && (isdigit(peek(in)) ||
                                   peek(in) == '.')) ||
                     (c == '.' && (isdigit(peek(in))))) {
@@ -803,7 +802,7 @@ object *lispy_read(FILE *in) {
     return read_number(in);
   }
   
-  /* BOOLEANs and CHARACTERs */
+  // BOOLEANs and CHARACTERs
   else if (c == '#') {
     c = getc(in);
 
@@ -818,7 +817,7 @@ object *lispy_read(FILE *in) {
     }
   }
 
-  /* SYMBOLs */
+  // SYMBOLs
   else if (is_initial(c) || 
            ((c == '+' || c == '-') && is_delimiter(peek(in)))) {
     i = 0;
@@ -841,11 +840,11 @@ object *lispy_read(FILE *in) {
     }
   }
   
-  /* STRINGs */
+  // STRINGs
   else if (c == '"') {
     i = 0;
     while ((c = getc(in)) != '"') {
-      /* Newline Escape Character */
+      // Newline Escape Character
       if (c == '\\') {
         c = getc(in);
         if (c == 'n') {c = '\n';}
@@ -864,22 +863,22 @@ object *lispy_read(FILE *in) {
     return make_string(buffer);
   }
       
-  /* Pairs */
+  // Pairs
   else if (c == '(') {
     return read_pair(in);
   }
   
-  /* Quote */
+  // Quote
   else if (c == '\'') {
     return cons(quote_symbol, cons(lispy_read(in), the_empty_list));
   }
 
-  /* EOF */
+  // EOF
   else if (c == EOF) {
     return NULL;
   }
 
-  /* UNRECOGNIZED INPUT */
+  // UNRECOGNIZED INPUT
   else {
     error("bad input. Unexpected '%c'\n", c);
   }
@@ -892,8 +891,8 @@ object *lispy_read(FILE *in) {
 **                               Evaluate
 ******************************************************************************/
 
-/* Self-Evaluating
-**************************************/
+// Self-Evaluating
+//___________________________________//
 
 char is_self_evaluating(object *exp) {
   return is_boolean(exp)   ||
@@ -905,8 +904,8 @@ char is_self_evaluating(object *exp) {
 }
 
 
-/* Primitive Syntax?
-**************************************/
+// Primitive Syntax?
+//___________________________________//
 
 char is_primitive_syntax(object *expression, object *identifier) {
   object *the_car;
@@ -919,8 +918,8 @@ char is_primitive_syntax(object *expression, object *identifier) {
 }
 
 
-/* quote
-**************************************/
+// quote
+//___________________________________//
 
 char is_quoted(object *expression) {
   return is_primitive_syntax(expression, quote_symbol);
@@ -933,8 +932,8 @@ object *quote_macro_arguments(object *exp) {
 }
 
 
-/* set!
-**************************************/
+// set!
+//___________________________________//
 
 char is_assignment(object *exp) {
   return is_primitive_syntax(exp, set_symbol);
@@ -949,8 +948,8 @@ object *assignment_value(object *exp) {
 }
 
 
-/* lambda
-**************************************/
+// lambda
+//___________________________________//
 
 object *make_lambda(object *parameters, object *body) {
   return cons(lambda_symbol, cons(parameters, body));
@@ -973,8 +972,8 @@ char is_last_exp(object *seq) {
 }
 
 
-/* define
-**************************************/
+// define
+//___________________________________//
 
 
 char is_definition(object *exp) {
@@ -1000,8 +999,8 @@ object *definition_value(object *exp) {
 }
 
 
-/* if
-**************************************/
+// if
+//___________________________________//
 
 char is_if(object *expression) {
   return is_primitive_syntax(expression, if_symbol);
@@ -1016,8 +1015,8 @@ object *make_if(object *test, object *consequent, object *alternative) {
 }
 
 
-/* cond
-**************************************/
+// cond
+//___________________________________//
 
 object *make_cond(object *clauses) {
   object *first = car(clauses);
@@ -1035,8 +1034,8 @@ object *make_cond(object *clauses) {
 }
 
 
-/* let
-**************************************/
+// let
+//___________________________________//
 
 object *make_let(object *exp) {
   object *bindings = car(exp);
@@ -1056,8 +1055,8 @@ object *make_let(object *exp) {
 }
 
 
-/* test
-**************************************/
+// test
+//___________________________________//
 object *h_equalp(object *obj_1, object *obj_2);
 object *eval(object *exp, object *env);
 
@@ -1085,16 +1084,16 @@ object *test(object *exp) {
   return Void;
 }
 
-/* Application of Primitive Procedures
-**************************************/
+// Application of Primitive Procedures
+//___________________________________//
 
 char is_application(object *exp) {
   return is_pair(exp);
 }
 
 
-/* eval arguments
-**************************************/
+// eval arguments
+//___________________________________//
 
 
 object *list_of_values(object *exps, object *env) {
@@ -1151,8 +1150,8 @@ object *eval_arguments(object *args, object *env, object *parameters) {
 }
 
 
-/* eval
-**************************************/
+// eval
+//___________________________________//
 
 object *eval(object *exp, object *env) {
   object *procedure;
@@ -1482,8 +1481,8 @@ object *p_empty_environment(object *arguments) {
   return the_empty_list;
 }
 
-/*  I/O
-*************************************************/
+//  I/O
+//___________________________________//
 
 //  display
 
@@ -1540,15 +1539,8 @@ object *p_load(object *arguments) {
 }
 
 
-/*  List Procedures
-************************************************/
-
-//  list
-/*
-object *p_list(object *arguments) {
-  return arguments;
-}
-*/
+//  List Procedures
+//___________________________________//
 
 //  null?
 
@@ -1566,8 +1558,8 @@ object *p_cons(object *arguments) {
 }
 
 
-/*  Equality Procedures
-************************************************/
+//  Equality Procedures
+//___________________________________//
 
 //  is?
 
@@ -1727,8 +1719,8 @@ object *p_not(object *exp) {
 }
 
 
-/*  Numeric Procedures
-************************************************/
+//  Numeric Procedures
+//___________________________________//
 
 //  +
 
@@ -2080,8 +2072,8 @@ object *p_less_than_or_eq(object *arguments) {
 
 
 
-/*  Type Procedures
-************************************************/
+//  Type Procedures
+//___________________________________//
 
 //  type
 
@@ -2237,8 +2229,8 @@ object *p_to_char(object *arguments) {
 }
 
 
-/*  Sequence Procedures
-************************************************/
+//  Sequence Procedures
+//___________________________________//
 
 //  first
 
@@ -2503,8 +2495,8 @@ object *p_index(object *obj) {
   }
 }
 
-/*  Meta-data Procedures
-************************************************/
+//  Meta-data Procedures
+//___________________________________//
 
 //  doc
 
@@ -2515,7 +2507,7 @@ object *p_doc(object *arguments) {
 
 
 //  System Procedures
-//_____________________________________________//
+//___________________________________//
 
 //  time
 
@@ -2540,7 +2532,7 @@ object *p_m_seconds(object *arguments) {
 
 
 //  Sequence Constructors / Comprehensions
-//_____________________________________________//
+//___________________________________//
 
 
 object *apply_loop_body(object *test, object *arg) {
@@ -2735,15 +2727,15 @@ object *p_range(object *args) {
 
 void populate_initial_environment(object *env) {
    
-  /* Self-evaluating Symbols
-  **********************************/
+  // Self-evaluating Symbols
+  //________________________________//
   define_variable(make_symbol("False"), False, env);
   define_variable(make_symbol("True"), True, env);
   define_variable(make_symbol("void"), Void, env);
 
   
-  /* Primitive Procedures
-  **********************************/
+  // Primitive Procedures
+  //________________________________//
   #define add_procedure(scheme_name, c_name)       \
     define_variable(make_symbol(scheme_name),      \
                     make_primitive_procedure(c_name),   \
@@ -2821,7 +2813,6 @@ void populate_initial_environment(object *env) {
   add_procedure("string",    p_string);
   add_procedure("vector",    p_vector);
   
-  add_procedure("refcount",  p_refcount);
 }
 
 
@@ -2852,8 +2843,8 @@ void init(void) {
 
   symbol_table = the_empty_list;
   
-  /* Primitive Forms
-  **********************************/
+  // Primitive Forms
+  //________________________________//
   quote_symbol        = make_symbol("quote");
   set_symbol          = make_symbol("set!");
   define_symbol       = make_symbol("define");
@@ -2882,8 +2873,8 @@ void init(void) {
 }
 
 
-/* REPL
-**************************************/
+// REPL
+//___________________________________//
 
 void REPL(void) {
   object *input;
