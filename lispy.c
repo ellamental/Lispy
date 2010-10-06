@@ -2059,7 +2059,7 @@ object *p_greater_than_or_eq(object *arguments) {
 //  <=
 
 object *h_less_than_or_eq(object *obj_1, object *obj_2) {
-  if (h_equalp(obj_1, obj_2)) {
+  if (h_equalp(obj_1, obj_2) == True) {
     return True;
   }
   else {
