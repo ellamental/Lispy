@@ -139,6 +139,7 @@ object *h_for(object *exp, object *env);
 
 object *h_emptyp(object *obj);
 
+object *p_print(object *arguments);
 
 
 
@@ -1225,16 +1226,16 @@ tailcall:
         goto tailcall;
       }
       else if (procedure == and_symbol) {
-        exp = cdr(exp);
-        while (!is_last_exp(exp)) {
-          if (eval(car(exp), env) != False) {
-            exp = cdr(exp);
-          }
-          else {
+        object *args = cdr(exp);
+        object *e;
+        while (args != the_empty_list) {
+          e = eval(car(args), env);
+          if (e == False) {
             return False;
           }
+          args = cdr(args);
         }
-        return car(exp);
+        return e;
       }
       else if (procedure == or_symbol) {
         object *result;
