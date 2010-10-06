@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
+#include <math.h>
  
 // Report Error and restart REPL
 void REPL(void);
@@ -2042,7 +2043,7 @@ object *p_less_than(object *arguments) {
 //  >=
 
 object *h_greater_than_or_eq(object *obj_1, object *obj_2) {
-  if (h_equalp(obj_1, obj_2)) {
+  if (h_equalp(obj_1, obj_2) == True) {
     return True;
   }
   else {
@@ -2070,6 +2071,55 @@ object *p_less_than_or_eq(object *arguments) {
   return h_less_than_or_eq(car(arguments), cadr(arguments));
 }
 
+
+//  **
+
+object *p_pow(object *args) {
+  object *o = car(args);
+  object *p = cadr(args);
+  switch (o->type) {
+    case FIXNUM:
+      switch (p->type) {
+        case FIXNUM:
+          return make_fixnum(pow(o->data.fixnum, p->data.fixnum));
+        case FLONUM:
+          return make_flonum(pow(o->data.fixnum, p->data.flonum));
+      }
+    case FLONUM:
+      switch (p->type) {
+        case FIXNUM:
+          return make_flonum(pow(o->data.flonum, p->data.fixnum));
+        case FLONUM:
+          return make_flonum(pow(o->data.flonum, p->data.flonum));
+      }
+  }
+}
+
+
+//  abs
+
+object *p_abs(object *args) {
+  object *o = car(args);
+  switch (o->type) {
+    case FIXNUM:
+      return make_fixnum(labs(o->data.fixnum));
+    case FLONUM:
+      return make_flonum(fabs(o->data.flonum));
+  }
+}
+
+
+//  sqrt
+
+object *p_sqrt(object *args) {
+  object *o = car(args);
+  switch (o->type) {
+    case FIXNUM:
+      return make_flonum(sqrt(o->data.fixnum));
+    case FLONUM:
+      return make_flonum(sqrt(o->data.flonum));
+  }
+}
 
 
 //  Type Procedures
@@ -2530,6 +2580,13 @@ object *p_m_seconds(object *arguments) {
   return make_flonum(tv.tv_sec + (tv.tv_usec / 1000000.0));
 }
 
+// system
+
+object *p_system(object *args) {
+  int retval = system(car(args)->data.string);
+  return make_fixnum(retval);
+}
+
 
 //  Sequence Constructors / Comprehensions
 //___________________________________//
@@ -2780,6 +2837,12 @@ void populate_initial_environment(object *env) {
   add_procedure("<=", p_less_than_or_eq);
 
   
+  // Mathematic Procedures
+  add_procedure("**",        p_pow);
+  add_procedure("abs",       p_abs);
+  add_procedure("sqrt",      p_sqrt);
+  
+  
   // Type Procedures
   add_procedure("type",      p_type);
   add_procedure("type?",     p_typep);
@@ -2788,6 +2851,12 @@ void populate_initial_environment(object *env) {
   add_procedure("->number",  p_to_number);
   add_procedure("->char",    p_to_char);
  
+  
+  // Constructor Dummy Procedures
+  add_procedure("list",      p_list);
+  add_procedure("string",    p_string);
+  add_procedure("vector",    p_vector);
+  
   
   // Sequence Procedures
   add_procedure("first",     p_first);
@@ -2808,10 +2877,9 @@ void populate_initial_environment(object *env) {
   add_procedure("sleep",     p_sleep);
   add_procedure("m-seconds", p_m_seconds);
   
-  // Constructor Dummy Procedures
-  add_procedure("list",      p_list);
-  add_procedure("string",    p_string);
-  add_procedure("vector",    p_vector);
+  
+  // System Procedures
+  add_procedure("system",    p_system);
   
 }
 
