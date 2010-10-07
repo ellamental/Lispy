@@ -2656,7 +2656,7 @@ object *h_list_for(object *exp, object *env) {
         seq = h_rest(seq);
       }
     }
-    return result_list;
+    return h_reverse(result_list);
   }
 
   // (list for ii in sequence expression)
@@ -2697,7 +2697,7 @@ object *h_list_from(object *exp, object *env) {
         seq = h_rest(seq);
       }
     }
-    return result_list;
+    return h_reverse(result_list);
   }
 }
 
