@@ -1116,3 +1116,14 @@
 ;;_________________________;;
 
 (print "Unit Test Completed Successfully")
+
+
+;; (define (list-for sequence func)
+;;   (define l '())
+;;   (define (list-for-loop seq)
+;;     (if (null? seq) l
+;;                     (begin 
+;;                       (set! l (cons (func (car seq)) l))
+;;                       (list-for-loop (cdr seq)))))
+;;   (reverse (list-for-loop sequence)))
+

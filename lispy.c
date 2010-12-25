@@ -9,7 +9,6 @@
 ** TODO:
 ** Refactor eval_arguments (support for variadic procedures)
 ** Add other types of meta-data and a convinent way of representing them.
-** Refactor eval/read to use switch statement instead of if/else
 ** Add a new 'File' type and operations on it (read, write, open, close, etc.)
 ** Refactor and fix bug in 'index'
 ******************************************************************************/
@@ -1488,7 +1487,6 @@ object *p_empty_environment(object *arguments) {
 
 //  display
 
-// BUG: Trying to write vector of length > 3 results in a seg fault
 object *p_display(object *arguments) {
   while (!is_the_empty_list(arguments)) {
     object *obj;
