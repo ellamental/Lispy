@@ -2963,7 +2963,11 @@ int main(void) {
   GC_INIT();
   
   printf("****************************************\n"
-         "**              Lispy                 **\n"
+         "**         _   _                      **\n"
+         "**        | | (_)________  _          **\n"
+         "**        | |_| (_-< _ \ || |         **\n"
+         "**        |___|_/__/ __/\_, |         **\n"
+         "**                 |_|  |__/          **\n"
          "**           Version 0.01             **\n"
          "**                                    **\n"
          "** Use ctrl-c to exit                 **\n"
@@ -2972,7 +2976,7 @@ int main(void) {
   init();
   
   // Load and run unit tests
-  p_load(cons(make_string("/home/trades/Documents/scheme/unit_test.lispy"), the_empty_list));
+  p_load(cons(make_string("/media/DATA/code/lispy/unit_test.lispy"), the_empty_list));
   
   REPL();
   

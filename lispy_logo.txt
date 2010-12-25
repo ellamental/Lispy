@@ -1,0 +1,9 @@
+ _   _
+| | (_)________  _ 
+| |_| (_-< _ \ || |
+|___|_/__/ __/\_, |
+         |_|  |__/ 
+Lispy IS PYthonic
+
+
+Fonts came from http://www.figlet.org/ though the actual program was not used.
