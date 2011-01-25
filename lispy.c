@@ -7,10 +7,7 @@
 ** http://michaux.ca/articles/scheme-from-scratch-introduction
 ** 
 ** TODO:
-** Refactor eval_arguments (support for variadic procedures)
-** Add other types of meta-data and a convinent way of representing them.
-** Add a new 'File' type and operations on it (read, write, open, close, etc.)
-** Refactor and fix bug in 'index'
+** 
 ******************************************************************************/
 #include <gc/gc.h>
 
@@ -2976,7 +2973,6 @@ int main(void) {
   init();
   
   // Load and run unit tests
-  // TODO: p_load could probably just take the string here instead of constructing a list
   p_load(cons(make_string("unit_test.lispy"), the_empty_list));
   
   REPL();
