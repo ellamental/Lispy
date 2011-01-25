@@ -1,14 +1,31 @@
 /******************************************************************************
-** scheme
-** 
-** A simple implementation of Scheme in C
-** 
-** Based on Bootstrap Scheme by Peter Michaux:
-** http://michaux.ca/articles/scheme-from-scratch-introduction
-** 
+** Lispy is a simple interpreter for a Scheme/Python-like language
+** Copyright (C) 2010, 2011 Jack Trades (jacktradespublic@gmail.com)
+**
+** Lispy was originally based on Bootstrap Scheme written by Peter Michaux
+** Copyright (C) 2010 Peter Michaux (http://peter.michaux.ca/)
+**
+** This file is part of Lispy
+**
+** Lispy is free software: you can redistribute it and/or
+** modify it under the terms of the GNU Affero General Public
+** License version 3 as published by the Free Software Foundation.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+** GNU Affero General Public License version 3 for more details.
+**
+** You should have received a copy of the GNU Affero General Public
+** License version 3 along with this program. If not, see
+** <http://www.gnu.org/licenses/>.
+**
+*******************************************************************************
+**
 ** TODO:
 ** 
 ******************************************************************************/
+
 #include <gc/gc.h>
 
 #include <stdlib.h>
