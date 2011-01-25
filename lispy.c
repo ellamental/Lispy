@@ -2965,8 +2965,8 @@ int main(void) {
   printf("****************************************\n"
          "**         _   _                      **\n"
          "**        | | (_)________  _          **\n"
-         "**        | |_| (_-< _ \ || |         **\n"
-         "**        |___|_/__/ __/\_, |         **\n"
+         "**        | |_| (_-< _ \\ || |         **\n"
+         "**        |___|_/__/ __/\\_, |         **\n"
          "**                 |_|  |__/          **\n"
          "**           Version 0.01             **\n"
          "**                                    **\n"
@@ -2976,7 +2976,8 @@ int main(void) {
   init();
   
   // Load and run unit tests
-  p_load(cons(make_string("/media/DATA/code/lispy/unit_test.lispy"), the_empty_list));
+  // TODO: p_load could probably just take the string here instead of constructing a list
+  p_load(cons(make_string("unit_test.lispy"), the_empty_list));
   
   REPL();
   
