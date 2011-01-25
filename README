@@ -36,6 +36,7 @@ run fine as long as you give it valid code (provided all the tests pass).
 **=============================================**
 
 Lispy depends on the Hans-Boehm Garbage Collector in /usr/include/gc
+This should do the trick in Ubuntu $ sudo apt-get install libgc-dev 
 
 After checking out the project, cd into the directory and type:
 
