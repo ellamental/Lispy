@@ -9,7 +9,7 @@
 ** Use ctrl-c to exit                 **
 ****************************************
 
-Lispy is a very simple Scheme interpreter with support for Python-like
+Lispy is a very simple Scheme-like interpreter with support for Python-like
 comprehensions and polymorphic basic procedures.  The main goal of Lispy is 
 to provide a simple implementation that illustrates the concepts behind 
 programming language constructs without focusing at all on efficency or error
