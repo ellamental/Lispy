@@ -1,0 +1,88 @@
+****************************************
+**         _   _                      **
+**        | | (_)________  _          **
+**        | |_| (_-< _ \ || |         **
+**        |___|_/__/ __/\_, |         **
+**                 |_|  |__/          **
+**           Version 0.01             **
+**                                    **
+** Use ctrl-c to exit                 **
+****************************************
+
+Lispy is a very simple Scheme interpreter with support for Python-like
+comprehensions and polymorphic basic procedures.  The main goal of Lispy is 
+to provide a simple implementation that illustrates the concepts behind 
+programming language constructs without focusing at all on efficency or error
+handling.
+
+Lispy is based on Bootstrap Scheme by Peter Michaux:
+http://michaux.ca/articles/scheme-from-scratch-introduction
+
+If you are trying to learn how to write an interpreter I highly recommend you
+read his Scheme From Scratch series as much of the basic functionality of 
+Lispy is based on his code.
+
+A test suite has been provided to verify basic functionality (though not 
+edge-cases) and to provide a form of limited documentation.  I strongly 
+suggest that you don't use Lispy for real-world applications.  Lispy should 
+run fine as long as you give it valid code (provided all the tests pass).
+
+
+**=============================================**
+** Installing Lispy
+**=============================================**
+
+Lispy depends on the Hans-Boehm Garbage Collector in /usr/include/gc
+
+After checking out the project, cd into the directory and type:
+
+$ make
+$ ./lispy
+****************************************
+**         _   _                      **
+**        | | (_)________  _          **
+**        | |_| (_-< _ \ || |         **
+**        |___|_/__/ __/\_, |         **
+**                 |_|  |__/          **
+**           Version 0.01             **
+**                                    **
+** Use ctrl-c to exit                 **
+****************************************
+Testing...
+Unit Test Completed Successfully
+> 
+
+
+If all goes well you will be greeted with this screen.
+The unit tests should report any errors if there are any.
+
+Lispy has been tested on 32 and 64 bit Ubuntu.  If you are having problems 
+installing you can email me at jacktradespublic AT gmail DOT com.
+
+
+
+
+**=============================================**
+** Files Included with Lispy
+**=============================================**
+
+** lispy.c
+The main source file for Lispy.  This is technically all you need.
+
+** unit_tests.lispy
+The Lispy test suite, run by default every time Lispy is loaded.
+
+** Makefile
+A simple one-line makefile
+
+** lispy_logo.txt
+A simple ASCII art logo for the Lispy launch screen.
+
+** licence.txt
+GNU Affero General Public License version 3 header and credit to Peter Michaux.
+
+** syntax_highlighting/lispy.xml  AND  chicken.xml
+Syntax highlighting files for the Kate text editor for Lispy and Chicken Scheme.
+Put these in your katepart syntax folder.
+In Ubuntu the directory is located at: /usr/share/kde4/apps/katepart/syntax
+Only for Kate development.  I don't know what your IDE will do with Lispy!
