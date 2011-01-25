@@ -28,6 +28,9 @@ suggest that you don't use Lispy for real-world applications.  Lispy should
 run fine as long as you give it valid code (provided all the tests pass).
 
 
+
+
+
 **=============================================**
 ** Installing Lispy
 **=============================================**
@@ -58,6 +61,22 @@ The unit tests should report any errors if there are any.
 
 Lispy has been tested on 32 and 64 bit Ubuntu.  If you are having problems 
 installing you can email me at jacktradespublic AT gmail DOT com.
+
+
+
+
+
+**=============================================**
+** Documentation
+**=============================================**
+
+The main form of documentation for Lispy is the unit tests and source code
+comments.  Both, unfortunately, are unsuitable as real documentation, 
+however Lispy is hardly a production system.
+
+The Pointless Programming Reference at plr.sourceforge.com will also contain 
+some documentation for Lispy.
+
 
 
 
