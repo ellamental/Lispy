@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<!--
+  This file is part of KDE's kate project.
+
+  copyright   : (C) 2010 by Jack Trades
+  email       : jacktradespublic at gmail dot com
+
+
+  copyright   : (C) 2004-2005 by Dominik Haumann
+  email       : dhdev at gmx dot de
+
+
+  copyright   : (C) 2004 by Goffart Olivier
+  email       : ogoffart @ kde.org
+      (brackets coloration)
+
+
+ **********************************************************************
+ * This library is free software; you can redistribute it and/or      *
+ * modify it under the terms of the GNU Library General Public        *
+ * License as published by the Free Software Foundation; either       *
+ * version 2 of the License, or (at your option) any later version.   *
+ *                                                                    *
+ * This library is distributed in the hope that it will be useful,    *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of     *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  *
+ * Library General Public License for more details.                   *
+ *                                                                    *
+ * You should have received a copy of the GNU Library General Public  *
+ * License along with this library; if not, write to the              *
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,       *
+ * Boston, MA  02110-1301, USA.                                       *
+ **********************************************************************
+ NOTE:
+-->
+<language version="1.00" kateversion="2.4" 
+          name="Lispy" section="Scripts"
+          extensions="*.lispy" 
+          indenter="lisp"
+          mimetype="text/x-scheme" 
+          author="Jack Trades (jacktradespublic@gmail.com) adapted from Dominik Haumann (dhdev@gmx.de)"
+          license="LGPL">
+
+  <highlighting>
+
+    <list name="operators">
+      <item> =            </item>
+      <item> +            </item>
+      <item> -            </item>
+      <item> *            </item>
+      <item> /            </item>
+<!--      <item> **     </item>    power     -->
+<!--      <item> //     </item>    quotient  -->
+<!--      <item> %      </item>    remainder -->
+      <item> &gt;         </item>
+      <item> &lt;         </item>
+      <item> &gt;=        </item>
+      <item> &lt;=        </item>
+    </list>
+
+    <list name="characters">
+      <item> #\newline    </item>
+      <item> #\space      </item>
+    </list>
+
+    <list name="defines">
+      <item> define       </item>
+      <item> define-macro </item>
+      <item> set!         </item>
+
+    </list>
+
+    <list name="keywords">
+
+<!-- Primitive Syntax -->
+      <item> quote        </item>
+      <item> define       </item>
+      <item> if           </item>
+      <item> cond         </item>
+      <item> lambda       </item>
+      <item> begin        </item>
+      <item> let          </item>
+
+      <item> test         </item>
+
+      <item> else         </item>
+      <item> &amp;rest    </item>
+      
+<!-- I/O Procedures -->
+
+      <item> display      </item>
+      <item> print        </item>
+      <item> load         </item>
+
+<!-- Sequence Constructors / Comprehensions -->
+      
+      <item> list         </item>
+      <item> string       </item>
+      <item> vector       </item>
+
+      <item> for          </item>
+      <item> from         </item>
+      <item> in           </item>
+
+<!-- List Procedures -->
+
+      <item> null?        </item>
+      <item> cons         </item>
+
+<!-- Equality Procedures -->
+      
+      <item> is?          </item>
+      <item> equal?       </item>
+      <item> not          </item>
+      
+<!-- Type Procedures -->
+
+      <item> type         </item>
+      <item> type?        </item>
+      <item> -&gt;string  </item>
+      <item> -&gt;number  </item>
+      <item> -&gt;char    </item>
+
+<!-- Sequence Procedures -->
+
+      <item> first        </item> 
+      <item> rest         </item> 
+      <item> empty?       </item>
+      <item> length       </item>
+      <item> index        </item>
+
+<!-- Metadata Procedures -->
+
+      <item> doc          </item>
+
+
+<!-- System Procedures -->
+
+      <item> time         </item>
+
+    </list>
+
+    <contexts>
+      <context name="Level0" attribute="Normal" lineEndContext="#stay">
+            <DetectChar attribute="Brackets1" context="Level1" char="("/>
+            <IncludeRules context="Default" />
+      </context>
+
+      <context name="Default" attribute="Normal" lineEndContext="#stay">
+        <RegExpr attribute="Region Marker" context="#stay" String=";+\s*BEGIN.*$" beginRegion="region"/>
+        <RegExpr attribute="Region Marker" context="#stay" String=";+\s*END.*$" endRegion="region"/>
+        <RegExpr attribute="Comment" context="#stay" String=";.*$"/>
+        <keyword attribute="Keyword" context="#stay" String="keywords"/>
+        <keyword attribute="Operator" context="#stay" String="operators"/>
+        <keyword attribute="Definition" context="function_decl" String="defines"/>
+        <keyword attribute="Char" context="#stay" String="characters"/>
+        <RegExpr attribute="Char" context="#stay" String="#\\."/>
+        <DetectChar attribute="String" context="String" char="&quot;"/>
+        <RegExpr attribute="Char" context="SpecialNumber" String="#[bodxei]"/>
+        <RegExpr attribute="Decimal" context="#stay" String="#[tf]"/>
+        <Float attribute="Float" context="#stay"/>
+        <Int attribute="Decimal" context="#stay"/>
+        <DetectChar attribute="Brackets1" context="Level1" char="("/>
+      </context>
+
+      <context name="SpecialNumber" attribute="Normal" fallthrough="true" lineEndContext="#pop">
+        <RegExpr attribute="Decimal" context="#pop" String="\d*(\.\d+)?"/>
+      </context>
+
+      <context name="String" attribute="String" lineEndContext="#stay">
+        <keyword attribute="Char" context="#stay" String="characters"/>
+        <RegExpr attribute="Char" context="#stay" String="#\\."/>
+        <Detect2Chars attribute="Char" context="#stay" char="\" char1="&quot;"/>
+        <Detect2Chars attribute="Char" context="#stay" char="\" char1="\"/>
+        <DetectChar attribute="String" context="#pop" char="&quot;"/>
+      </context>
+
+      <context name="function_decl" attribute="Function" lineEndContext="#stay">
+        <RegExpr attribute="Function" context="#pop" String="\s*[A-Za-z0-9-+\&lt;\&gt;//\*]*\s*" />
+      </context>
+
+      <context name="Level1" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets2" context="Level2" char="("/>
+           <DetectChar attribute="Brackets1" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+
+      <context name="Level2" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets3" context="Level3" char="("/>
+           <DetectChar attribute="Brackets2" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+
+      <context name="Level3" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets4" context="Level4" char="("/>
+           <DetectChar attribute="Brackets3" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+
+      <context name="Level4" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets5" context="Level5" char="("/>
+           <DetectChar attribute="Brackets4" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+
+      <context name="Level5" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets6" context="Level6" char="("/>
+           <DetectChar attribute="Brackets5" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+
+      <context name="Level6" attribute="Normal" lineEndContext="#stay">
+           <DetectChar attribute="Brackets1" context="Level1" char="("/>
+           <DetectChar attribute="Brackets6" context="#pop" char=")" />
+           <IncludeRules context="Default" />
+      </context>
+    </contexts>
+
+    <itemDatas>
+      <itemData name="Normal"      defStyleNum="dsNormal"/>
+      <itemData name="Keyword"     defStyleNum="dsKeyword"/>
+      <itemData name="Definition"  defStyleNum="dsKeyword" color="#d22811"/>
+      <itemData name="Operator"    defStyleNum="dsKeyword" color="#d22811"/>
+      <itemData name="Function"    defStyleNum="dsFunction"/>
+      <itemData name="Data"        defStyleNum="dsDataType"/>
+      <itemData name="Decimal"     defStyleNum="dsDecVal"/>
+      <itemData name="BaseN"       defStyleNum="dsBaseN"/>
+      <itemData name="Float"       defStyleNum="dsFloat"/>
+      <itemData name="Char"        defStyleNum="dsChar"/>
+      <itemData name="String"      defStyleNum="dsString"/>
+      <itemData name="Comment"     defStyleNum="dsComment"/>
+      <itemData name="Region Marker" defStyleNum="dsRegionMarker"/>
+      <itemData name="Brackets1"    defStyleNum="dsNormal" color="#ff0000" selColor="#000000" bold="1" italic="0"/>
+      <itemData name="Brackets2"    defStyleNum="dsNormal" color="#ff8800" selColor="#000000" bold="1" italic="0"/>
+      <itemData name="Brackets3"    defStyleNum="dsNormal" color="#888800" selColor="#000000" bold="1" italic="0"/>
+      <itemData name="Brackets4"    defStyleNum="dsNormal" color="#008800" selColor="#000000" bold="1" italic="0"/>
+      <itemData name="Brackets5"    defStyleNum="dsNormal" color="#000088" selColor="#000000" bold="1" italic="0"/>
+      <itemData name="Brackets6"    defStyleNum="dsNormal" color="#880088" selColor="#000000" bold="1" italic="0"/>
+    </itemDatas>
+
+  </highlighting>
+
+  <general>
+    <keywords casesensitive="1" weakDeliminator="-+*?!&lt;&gt;=/:#\"/>
+    <comments>
+      <comment name="singleLine" start=";;" />
+    </comments>
+  </general>
+
+
+</language>
