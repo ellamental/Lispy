@@ -724,6 +724,18 @@
 ;;_______________________________________________________;;
 
 
+
+;;  range
+;;_________________________;;
+
+(test 
+  (range 5)
+  >>> '(0 1 2 3 4)
+  (range 5 10)
+  >>> '(5 6 7 8 9)
+)
+
+
 ;;  list
 ;;_________________________;;
 
@@ -764,6 +776,12 @@
   
   (list for ii in "hello" ->number)
   >>> '(104 101 108 108 111)
+  
+  ;; Nested comprehensions
+  (list for ii in (range 3) 
+    (list for jj in (range 2) (list ii jj)))
+  >>> '(((0 0) (0 1)) ((1 0) (1 1)) ((2 0) (2 1)))
+
 )
 
 
@@ -783,6 +801,7 @@
 ;;  vector
 ;;_________________________;;
 
+;; Tests should pass but equal? has not been implemented for vectors yet
 ;; (test
 ;;   (vector 1)
 ;;   >>> #(1)
