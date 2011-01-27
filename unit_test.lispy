@@ -1113,7 +1113,7 @@
 ;;_________________________;;
 
 ;; (test
-;;   (define (sleep n)
+;;   (define (test-time n)
 ;;     (define start (time))
 ;;     (define (sleep-loop)
 ;;       (if (> (- (time) start) (- n 1))
@@ -1121,9 +1121,23 @@
 ;;         (sleep-loop)))
 ;;     (sleep-loop))
 ;;   >>> void
-;;   (sleep 1)
+;;   (test-time 1)
 ;;   >>> 1
 ;; )
+
+
+;;  sleep
+;;  Uncomment code when modifying (sleep ...) otherwise it takes too long to test
+;;_________________________;;
+
+;; (test
+;;   (sleep 2)
+;;   >>> void
+;; )
+
+
+
+
 
 ;;  time test
 ;;_________________________;;
