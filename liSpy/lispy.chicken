@@ -1,0 +1,61 @@
+;;__________________________________________________________________________;;
+;; lispy
+;;__________________________________________________________________________;;
+
+(use srfi-69)
+
+(define global-syntax-definitions (make-hash-table))
+(define frame (make-hash-table))
+(define-record primitive function)
+
+(define (set-symbol! symbol value)
+  (hash-table-set! frame symbol value))
+
+(define (lookup-variable-value symbol)
+  (if (hash-table-exists? frame symbol)
+      (hash-table-ref frame symbol)
+      "Error: Unbound variable"))
+
+(define (self-evaluating? expr)
+  (or (number? expr) (string? expr) (char? expr) (boolean? expr)))
+
+(define (lispy-eval expr)
+  (cond ((self-evaluating? expr) expr)
+        ((symbol? expr) (lookup-variable-value expr))
+        (else
+          (if (hash-table-exists? global-syntax-definitions (car expr))
+              ((hash-table-ref global-syntax-definitions (car expr)) (cdr expr))
+              (lispy-apply (lispy-eval (car expr)) (eval-arguments (cdr expr)))))))
+
+(define (eval-arguments args)
+  (map (lambda (x) (lispy-eval x)) args))
+
+(define (lispy-apply procedure arguments) 
+  (if (primitive? procedure)
+    (apply (primitive-function procedure) arguments)
+    "Error: Undefined procedure")) 
+
+(set-symbol! '+ (make-primitive +))
+
+(hash-table-set! global-syntax-definitions 'scheme-syntax
+  (lambda (expr)
+    (hash-table-set! global-syntax-definitions (car expr) (eval (cadr expr)))))
+
+(hash-table-set! global-syntax-definitions 'load
+  (lambda (expr)
+    (define f (open-input-file (car expr)))
+    (let loop ((e (read f)))
+      (if (equal? e #!eof) "Successfully Loaded!"
+                           (begin
+                             (lispy-eval e)
+                             (loop (read f)))))))
+
+((hash-table-ref global-syntax-definitions 'load) '("syntax.chicken"))
+
+(define (repl)
+  (define input (read))
+  (print (lispy-eval input))
+  (repl))
+
+(repl)
+
