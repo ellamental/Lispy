@@ -5,23 +5,32 @@
 (use srfi-69)
 
 (define global-syntax-definitions (make-hash-table))
-(define frame (make-hash-table))
 (define-record primitive function)
 
-(define (set-symbol! symbol value)
-  (hash-table-set! frame symbol value))
+(define (current-environment env) (car env))
+(define (enclosing-environment env) (cdr env))
 
-(define (lookup-variable-value symbol)
-  (if (hash-table-exists? frame symbol)
-      (hash-table-ref frame symbol)
-      "Error: Unbound variable"))
+(define (extend-environment bindings base-environment)
+  (cons (alist->hash-table bindings) base-environment))
+
+(define the-global-environment (extend-environment '() '()))
+
+(define (set-symbol! symbol value)
+  (hash-table-set! (current-environment the-global-environment) symbol value))
+
+(define (lookup-symbol-value symbol environment)
+  (if (null? environment)
+    (error 'unbound-symbol "Unbound symbol:  " symbol)
+    (if (hash-table-exists? (current-environment environment) symbol)
+        (hash-table-ref (current-environment environment) symbol)
+        (lookup-symbol-value symbol (enclosing-environment environment)))))
 
 (define (self-evaluating? expr)
   (or (number? expr) (string? expr) (char? expr) (boolean? expr)))
 
 (define (lispy-eval expr)
   (cond ((self-evaluating? expr) expr)
-        ((symbol? expr) (lookup-variable-value expr))
+        ((symbol? expr) (lookup-symbol-value expr the-global-environment))
         (else
           (if (hash-table-exists? global-syntax-definitions (car expr))
               ((hash-table-ref global-syntax-definitions (car expr)) (cdr expr))
@@ -34,8 +43,6 @@
   (if (primitive? procedure)
     (apply (primitive-function procedure) arguments)
     "Error: Undefined procedure")) 
-
-(set-symbol! '+ (make-primitive +))
 
 (hash-table-set! global-syntax-definitions 'scheme-syntax
   (lambda (expr)
@@ -54,7 +61,7 @@
 
 (define (repl)
   (define input (read))
-  (print (lispy-eval input))
+  (print ";===> " (lispy-eval input))
   (repl))
 
 (repl)
