@@ -1,0 +1,14 @@
+(scheme-syntax define
+  (lambda (expr)
+    (set-symbol! (car expr) (lispy-eval (cadr expr)))))
+
+(scheme-syntax if
+  (lambda (expr)
+    (if (lispy-eval (car expr))
+        (lispy-eval (cadr expr))
+        (lispy-eval (caddr expr)))))
+
+(scheme-syntax define-primitive
+  (lambda (expr)
+    (set-symbol! (car expr)
+                 (make-primitive (eval (cadr expr))))))
