@@ -15,8 +15,8 @@
 
 (define the-global-environment (extend-environment '() '()))
 
-(define (set-symbol! symbol value)
-  (hash-table-set! (current-environment the-global-environment) symbol value))
+(define (set-symbol! symbol value env)
+  (hash-table-set! (current-environment env) symbol value))
 
 (define (lookup-symbol-value symbol environment)
   (if (null? environment)
@@ -28,12 +28,12 @@
 (define (self-evaluating? expr)
   (or (number? expr) (string? expr) (char? expr) (boolean? expr)))
 
-(define (lispy-eval expr)
+(define (lispy-eval expr env)
   (cond ((self-evaluating? expr) expr)
-        ((symbol? expr) (lookup-symbol-value expr the-global-environment))
+        ((symbol? expr) (lookup-symbol-value expr env))
         (else
           (if (hash-table-exists? global-syntax-definitions (car expr))
-              ((hash-table-ref global-syntax-definitions (car expr)) (cdr expr))
+              ((hash-table-ref global-syntax-definitions (car expr)) (cdr expr) env)
               (lispy-apply (lispy-eval (car expr)) (eval-arguments (cdr expr)))))))
 
 (define (eval-arguments args)
@@ -45,23 +45,23 @@
     "Error: Undefined procedure")) 
 
 (hash-table-set! global-syntax-definitions 'scheme-syntax
-  (lambda (expr)
+  (lambda (expr env)
     (hash-table-set! global-syntax-definitions (car expr) (eval (cadr expr)))))
 
 (hash-table-set! global-syntax-definitions 'load
-  (lambda (expr)
+  (lambda (expr env)
     (define f (open-input-file (car expr)))
     (let loop ((e (read f)))
       (if (equal? e #!eof) "Successfully Loaded!"
                            (begin
-                             (lispy-eval e)
+                             (lispy-eval e env)
                              (loop (read f)))))))
 
-((hash-table-ref global-syntax-definitions 'load) '("syntax.chicken"))
+((hash-table-ref global-syntax-definitions 'load) '("syntax.chicken") the-global-environment)
 
 (define (repl)
   (define input (read))
-  (print ";===> " (lispy-eval input))
+  (print ";===> " (lispy-eval input the-global-environment))
   (repl))
 
 (repl)
