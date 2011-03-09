@@ -3,9 +3,11 @@
 ;;__________________________________________________________________________;;
 
 (use srfi-69)
+(use srfi-1)
 
 (define global-syntax-definitions (make-hash-table))
 (define-record primitive function)
+(define-record proc parameters body environment)
 
 (define (current-environment env) (car env))
 (define (enclosing-environment env) (cdr env))
@@ -20,7 +22,7 @@
 
 (define (lookup-symbol-value symbol environment)
   (if (null? environment)
-    (error 'unbound-symbol "Unbound symbol:  " symbol)
+    "Error: Unbound symbol";(error 'unbound-symbol "Unbound symbol:  " symbol)
     (if (hash-table-exists? (current-environment environment) symbol)
         (hash-table-ref (current-environment environment) symbol)
         (lookup-symbol-value symbol (enclosing-environment environment)))))
@@ -34,15 +36,26 @@
         (else
           (if (hash-table-exists? global-syntax-definitions (car expr))
               ((hash-table-ref global-syntax-definitions (car expr)) (cdr expr) env)
-              (lispy-apply (lispy-eval (car expr)) (eval-arguments (cdr expr)))))))
+              (lispy-apply (lispy-eval (car expr) env) (eval-arguments (cdr expr) env))))))
 
-(define (eval-arguments args)
-  (map (lambda (x) (lispy-eval x)) args))
+(define (eval-arguments args env)
+  (map (lambda (x) (lispy-eval x env)) args))
+
+(define (eval-body args env)
+  (last (eval-arguments args env)))
+
+(define (assign-values procedure args)
+  (map cons (proc-parameters procedure) args))
 
 (define (lispy-apply procedure arguments) 
-  (if (primitive? procedure)
-    (apply (primitive-function procedure) arguments)
-    "Error: Undefined procedure")) 
+  (cond ((primitive? procedure)
+           (apply (primitive-function procedure) arguments))
+        ((proc? procedure)
+           (eval-body (proc-body procedure)
+                      (extend-environment (assign-values procedure arguments)
+                                          (proc-environment procedure))))
+        (else
+           "Error: Undefined procedure")))
 
 (hash-table-set! global-syntax-definitions 'scheme-syntax
   (lambda (expr env)

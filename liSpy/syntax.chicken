@@ -4,11 +4,18 @@
 
 (scheme-syntax if
   (lambda (expr env)
-    (if (lispy-eval (car expr))
-        (lispy-eval (cadr expr))
-        (lispy-eval (caddr expr)))))
+    (if (lispy-eval (car expr) env)
+        (lispy-eval (cadr expr) env)
+        (lispy-eval (caddr expr) env))))
 
 (scheme-syntax define-primitive
   (lambda (expr env)
     (set-symbol! (car expr)
                  (make-primitive (eval (cadr expr))))))
+
+(scheme-syntax function
+  (lambda (expr env)
+    (set-symbol! (caar expr)
+                 (make-proc (cdar expr)
+                            (cdr expr)
+                            env) env)))
