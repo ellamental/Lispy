@@ -28,7 +28,7 @@
         (lookup-symbol-value symbol (enclosing-environment environment)))))
 
 (define (self-evaluating? expr)
-  (or (number? expr) (string? expr) (char? expr) (boolean? expr)))
+  (or (number? expr) (string? expr) (char? expr) (boolean? expr) (proc? expr)))
 
 (define (lispy-eval expr env)
   (cond ((self-evaluating? expr) expr)
@@ -70,7 +70,7 @@
                              (lispy-eval e env)
                              (loop (read f)))))))
 
-((hash-table-ref global-syntax-definitions 'load) '("syntax.chicken") the-global-environment)
+((hash-table-ref global-syntax-definitions 'load) '("scheme_in_lispy.chicken") the-global-environment)
 
 (define (repl)
   (define input (read))

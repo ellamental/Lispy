@@ -1,0 +1,32 @@
+(scheme-syntax define-primitive
+  (lambda (expr env)
+    (set-symbol! (car expr)
+                 (make-primitive (eval (cadr expr))))))
+
+(scheme-syntax define
+  (lambda (expr env)
+    (if (list? (car expr))
+        (set-symbol! (caar expr)
+                     (make-proc (cdar expr)
+                                (cdr expr)
+                                env) env)
+        (set-symbol! (car expr) (lispy-eval (cadr expr) env) env))))
+
+(scheme-syntax lambda
+  (lambda (expr env)
+    (make-proc (cdar expr)
+               (cdr expr)
+               env)))
+
+(scheme-syntax if
+  (lambda (expr env)
+    (if (lispy-eval (car expr) env)
+        (lispy-eval (cadr expr) env)
+        (lispy-eval (caddr expr) env))))
+
+
+
+
+
+
+
