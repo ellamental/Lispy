@@ -48,8 +48,9 @@
 
 (define-primitive + +)
 (define-primitive - -)
-(define-primitive / /)
-(define-primitive * *)
+(define-primitive < <)
+(define-primitive > >)
 (define-primitive car car)
 (define-primitive cdr cdr)
 (define-primitive cons cons)
+(define-primitive print print)
