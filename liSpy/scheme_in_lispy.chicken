@@ -1,7 +1,8 @@
 (scheme-syntax define-primitive
   (lambda (expr env)
     (set-symbol! (car expr)
-                 (make-primitive (eval (cadr expr))))))
+                 (make-primitive (eval (cadr expr)))
+                 env)))
 
 (scheme-syntax define
   (lambda (expr env)
@@ -14,7 +15,7 @@
 
 (scheme-syntax lambda
   (lambda (expr env)
-    (make-proc (cdar expr)
+    (make-proc (car expr)
                (cdr expr)
                env)))
 
@@ -24,9 +25,31 @@
         (lispy-eval (cadr expr) env)
         (lispy-eval (caddr expr) env))))
 
+(scheme-syntax quote
+  (lambda (expr env)
+    (car expr)))
 
+(scheme-syntax set!
+  (lambda (expr env)
+    (set-symbol! (car expr) (lispy-eval (cadr expr) env) env)))
 
+(scheme-syntax begin
+  (lambda (expr env)
+    (eval-body expr env)))
 
+(scheme-syntax let
+  (lambda (expr env)
+    (eval-body (cdr expr) (extend-environment (car expr) env))))
 
+(scheme-syntax equal?
+  (lambda (expr env)
+    (equal? (lispy-eval (car expr) env)
+            (lispy-eval (cadr expr) env))))
 
-
+(define-primitive + +)
+(define-primitive - -)
+(define-primitive / /)
+(define-primitive * *)
+(define-primitive car car)
+(define-primitive cdr cdr)
+(define-primitive cons cons)

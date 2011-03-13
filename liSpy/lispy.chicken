@@ -22,7 +22,7 @@
 
 (define (lookup-symbol-value symbol environment)
   (if (null? environment)
-    "Error: Unbound symbol";(error 'unbound-symbol "Unbound symbol:  " symbol)
+    (conc "Error: Unbound symbol: " symbol);(error 'unbound-symbol "Unbound symbol:  " symbol)
     (if (hash-table-exists? (current-environment environment) symbol)
         (hash-table-ref (current-environment environment) symbol)
         (lookup-symbol-value symbol (enclosing-environment environment)))))
@@ -55,7 +55,7 @@
                       (extend-environment (assign-values procedure arguments)
                                           (proc-environment procedure))))
         (else
-           "Error: Undefined procedure")))
+           (conc "Error: Undefined procedure: " (->string procedure)))))
 
 (hash-table-set! global-syntax-definitions 'scheme-syntax
   (lambda (expr env)
